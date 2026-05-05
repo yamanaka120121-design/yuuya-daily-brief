@@ -91,28 +91,46 @@ def fetch_feed(url: str, max_items: int) -> list[dict]:
 
 # ─── HTML 生成 ────────────────────────────────────────────────────────────────
 
+TAG_MAP = {
+    "社会": ("tag tag-society",  "社会"),
+    "文化": ("tag tag-culture",  "文化・エンタメ"),
+    "科学": ("tag tag-science",  "科学・医療"),
+}
+
+def _tag_class(source_name: str) -> tuple[str, str]:
+    for key, val in TAG_MAP.items():
+        if key in source_name:
+            return val
+    return ("tag tag-default", source_name)
+
+
 def build_body(items_by_source: list[tuple]) -> str:
     html = ""
     for source_name, items in items_by_source:
         if not items:
             continue
-        html += f'<p class="section-title">{source_name}</p>\n'
+        cls, label = _tag_class(source_name)
+        html += f'<p class="section-label">{label}</p>\n'
         for item in items:
-            html += f'<div class="card"><a href="{item["link"]}" target="_blank" rel="noopener">{item["title"]}</a>'
+            html += (
+                f'<div class="card">'
+                f'<a class="news-card" href="{item["link"]}" target="_blank" rel="noopener">'
+                f'<p class="news-title">{item["title"]}</p>'
+            )
             if item["summary"]:
-                html += f'<p>{item["summary"]}</p>'
-            html += "</div>\n"
+                html += f'<p class="news-summary">{item["summary"]}</p>'
+            html += '<span class="news-link">記事を読む →</span></a></div>\n'
     return html
 
 
 def build_kanji_html(kanji: dict) -> str:
     return (
-        '<p class="section-title kanji-title">漢字検定 準一級 — 今日の一問</p>\n'
+        '<p class="section-label kanji">漢字検定 準一級 — 今日の一問</p>\n'
         '<div class="card kanji-card">\n'
         f'  <p class="kanji-q">{kanji["q"]}</p>\n'
-        '  <details>\n'
+        '  <details class="kanji-hint">\n'
         '    <summary>答えを見る</summary>\n'
-        f'    <p class="kanji-a">読み：<strong>{kanji["a"]}</strong></p>\n'
+        f'    <p class="kanji-a">読み：{kanji["a"]}</p>\n'
         f'    <p class="kanji-m">意味：{kanji["meaning"]}</p>\n'
         '  </details>\n'
         '</div>\n'
@@ -145,58 +163,89 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{title}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
   body {{
-    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
-                 "Noto Sans JP", sans-serif;
-    background: #f4f5f7; color: #222; padding: 16px;
+    font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f1f5f9; color: #1e293b; min-height: 100vh; padding: 16px 16px 40px;
   }}
-  .container {{ max-width: 640px; margin: 0 auto; }}
-  header {{
-    background: {header_color}; color: white;
-    border-radius: 12px; padding: 20px 20px 14px; margin-bottom: 20px;
+  .container {{ max-width: 600px; margin: 0 auto; }}
+
+  /* ── ヘッダー ── */
+  .page-header {{ margin-bottom: 20px; padding-top: 4px; }}
+  .page-date {{ font-size: 11px; color: #94a3b8; font-weight: 500; margin-bottom: 2px; }}
+  .page-title {{ font-size: 22px; font-weight: 700; color: #1e293b; }}
+  .page-title span {{ color: {header_color}; }}
+
+  /* ── セクションラベル ── */
+  .section-label {{
+    display: inline-block; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 99px; letter-spacing: 0.04em;
+    background: {header_color}; color: white; margin-bottom: 10px; margin-top: 20px;
   }}
-  header h1 {{ font-size: 1.25em; font-weight: 700; }}
-  header p  {{ font-size: 0.8em; opacity: 0.85; margin-top: 4px; }}
-  .section-title {{
-    font-size: 0.75em; font-weight: 700; letter-spacing: 0.06em;
-    text-transform: uppercase; color: {accent_color}; margin: 20px 0 8px;
-  }}
-  .kanji-title {{ color: #b5830a !important; }}
+  .section-label.kanji {{ background: #b45309; }}
+
+  /* ── カード共通 ── */
   .card {{
-    background: white; border-radius: 10px;
-    padding: 14px 16px; margin-bottom: 10px;
+    background: white; border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    padding: 16px; margin-bottom: 10px;
   }}
-  .kanji-card {{ border-left: 3px solid #b5830a; }}
-  .card a {{
-    color: #1a4a8a; font-weight: 600; font-size: 0.95em;
-    text-decoration: none; line-height: 1.45; display: block;
+  .card + .card {{ margin-top: 0; }}
+
+  /* ── 漢字カード ── */
+  .card.kanji-card {{ border-left: 4px solid #b45309; }}
+  .kanji-q {{ font-size: 15px; font-weight: 600; color: #1e293b; line-height: 1.5; }}
+  .kanji-hint {{ margin-top: 4px; }}
+  .kanji-hint summary {{
+    font-size: 13px; color: #b45309; cursor: pointer;
+    font-weight: 600; user-select: none; list-style: none;
+    display: inline-flex; align-items: center; gap: 4px;
   }}
-  .card a:hover {{ text-decoration: underline; }}
-  .card p {{ font-size: 0.8em; color: #666; margin-top: 5px; line-height: 1.5; }}
-  .kanji-q  {{ font-size: 1em; font-weight: 600; line-height: 1.5; color: #222; }}
-  .kanji-a  {{ font-size: 0.9em; margin-top: 8px; color: #222; }}
-  .kanji-m  {{ font-size: 0.8em; color: #666; margin-top: 4px; }}
-  details summary {{
-    font-size: 0.85em; color: #b5830a; cursor: pointer;
-    margin-top: 10px; user-select: none;
+  .kanji-hint summary::before {{ content: "▶"; font-size: 9px; }}
+  details[open] .kanji-hint summary::before {{ content: "▼"; }}
+  .kanji-a {{ font-size: 14px; font-weight: 700; color: #1e293b; margin-top: 10px; }}
+  .kanji-m {{ font-size: 12px; color: #64748b; margin-top: 3px; }}
+
+  /* ── ニュースカード ── */
+  .news-card {{ display: block; text-decoration: none; color: inherit; }}
+  .news-card:hover .news-title {{ color: {header_color}; }}
+  .tag {{
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 99px; margin-bottom: 6px;
   }}
-  details[open] summary {{ margin-bottom: 6px; }}
-  footer {{
-    text-align: center; font-size: 0.72em; color: #aaa;
-    margin-top: 28px; padding-bottom: 24px;
+  .tag-society {{ background: #dbeafe; color: #1d4ed8; }}
+  .tag-culture  {{ background: #fef3c7; color: #92400e; }}
+  .tag-science  {{ background: #d1fae5; color: #065f46; }}
+  .tag-default  {{ background: #f1f5f9; color: #475569; }}
+  .news-title {{
+    font-size: 14px; font-weight: 600; color: #1e293b;
+    line-height: 1.5; margin-bottom: 4px;
+  }}
+  .news-summary {{ font-size: 12px; color: #64748b; line-height: 1.6; }}
+  .news-link {{
+    display: inline-block; margin-top: 8px;
+    font-size: 12px; font-weight: 600; color: {header_color};
+  }}
+
+  /* ── フッター ── */
+  .page-footer {{
+    text-align: center; font-size: 11px; color: #cbd5e1;
+    margin-top: 32px;
   }}
 </style>
 </head>
 <body>
 <div class="container">
-  <header>
-    <h1>{heading}</h1>
-    <p>{date_str}</p>
-  </header>
+  <div class="page-header">
+    <p class="page-date">{date_str}</p>
+    <h1 class="page-title"><span>{heading}</span></h1>
+  </div>
   {body}
-  <footer>yuuya-daily-brief · 山中優弥 専用</footer>
+  <p class="page-footer">山中優弥 専用 · yuuya-daily</p>
 </div>
 </body>
 </html>"""
