@@ -122,13 +122,13 @@ def build_kanji_html(kanji: dict) -> str:
 def generate_html(content_type: str, items_by_source: list[tuple], now: datetime) -> str:
     date_str = now.strftime("%Y年%m月%d日（%a） %H:%M JST")
     if content_type == "morning":
-        heading      = "朝のブリーフ"
-        title        = f"朝のブリーフ — {now.strftime('%m/%d')}"
+        heading      = "朝の記事"
+        title        = f"朝の記事 — {now.strftime('%m/%d')}"
         header_color = "#2d6a4f"
         accent_color = "#2d6a4f"
     else:
-        heading      = "昼のブリーフ"
-        title        = f"昼のブリーフ — {now.strftime('%m/%d')}"
+        heading      = "昼の記事"
+        title        = f"昼の記事 — {now.strftime('%m/%d')}"
         header_color = "#1a4a8a"
         accent_color = "#1a4a8a"
 
@@ -229,7 +229,7 @@ def main() -> None:
     content_type = args.type
     feeds        = MORNING_FEEDS if content_type == "morning" else NOON_FEEDS
 
-    print(f"[{now.strftime('%H:%M JST')}] {content_type} ブリーフ 生成開始")
+    print(f"[{now.strftime('%H:%M JST')}] {content_type} 記事 生成開始")
 
     items_by_source = []
     for name, url, max_items in feeds:
@@ -253,7 +253,7 @@ def main() -> None:
         "https://yamanaka120121-design.github.io"
         f"/yuuya-daily-brief/{content_type}.html"
     )
-    message = f"【{date_label} {label}のブリーフ】\n{url}"
+    message = f"【{date_label} {label}の記事】\n{url}"
     send_line(token, user_id, message)
 
 
