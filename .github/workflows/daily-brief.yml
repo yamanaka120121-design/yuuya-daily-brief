@@ -1,0 +1,65 @@
+name: Daily Brief
+
+on:
+  schedule:
+    - cron: '30 21 * * *'   # 朝 6:30 JST (= UTC 21:30 前日)
+    - cron: '0 3 * * *'     # 昼 12:00 JST (= UTC 03:00)
+  workflow_dispatch:
+    inputs:
+      type:
+        description: '配信種別 (morning / noon)'
+        required: true
+        default: 'morning'
+        type: choice
+        options:
+          - morning
+          - noon
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Determine content type
+        id: type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.type }}" >> "$GITHUB_OUTPUT"
+          else
+            HOUR=$(date -u +%H)
+            if [ "$HOUR" = "21" ]; then
+              echo "type=morning" >> "$GITHUB_OUTPUT"
+            else
+              echo "type=noon" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: Generate brief and send LINE
+        run: python scripts/generate.py --type ${{ steps.type.outputs.type }}
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+
+      - name: Commit and push updated HTML
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          git diff --staged --quiet || \
+            git commit -m "brief: update ${{ steps.type.outputs.type }} $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
