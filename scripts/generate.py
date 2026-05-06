@@ -94,21 +94,24 @@ def fetch_feed(url: str, max_items: int) -> list[dict]:
 SOURCE_META = {
     "社会": {
         "label": "社会のニュース",
-        "icon": "🏛️",
+        "tab":   "社会ニュース",
+        "icon":  "🏛️",
+        "icon_bg": "bg-blue-50",
         "tag_cls": "bg-blue-50 text-blue-600",
-        "border": "border-l-4 border-blue-400",
     },
     "文化": {
         "label": "文化・エンタメ",
-        "icon": "🎭",
+        "tab":   "文化・エンタメ",
+        "icon":  "🎭",
+        "icon_bg": "bg-amber-50",
         "tag_cls": "bg-amber-50 text-amber-600",
-        "border": "border-l-4 border-amber-300",
     },
     "科学": {
         "label": "科学・医療",
-        "icon": "🔬",
+        "tab":   "科学・医療",
+        "icon":  "🔬",
+        "icon_bg": "bg-green-50",
         "tag_cls": "bg-green-50 text-green-600",
-        "border": "border-l-4 border-green-400",
     },
 }
 
@@ -116,79 +119,95 @@ def _meta(source_name: str) -> dict:
     for key, val in SOURCE_META.items():
         if key in source_name:
             return val
-    return {"label": source_name, "icon": "📰",
-            "tag_cls": "bg-slate-100 text-slate-500", "border": ""}
+    return {
+        "label": source_name, "tab": source_name,
+        "icon": "📰", "icon_bg": "bg-slate-100",
+        "tag_cls": "bg-slate-100 text-slate-500",
+    }
+
+
+def _read_time(title: str, summary: str) -> str:
+    chars = len(title) + len(summary)
+    mins  = max(1, round(chars / 400))
+    return f"📖 {mins}分"
 
 
 def build_body(items_by_source: list[tuple]) -> str:
-    html = ""
+    """記事一覧 (教育ブログ 画面03) と同じカードレイアウトで生成する"""
+    html = '<ul class="space-y-3">\n'
     for source_name, items in items_by_source:
         if not items:
             continue
         m = _meta(source_name)
-        html += f'''
-<div class="flex items-center gap-2 mt-5 mb-2">
-  <span class="section-label">{m["icon"]} {m["label"]}</span>
-</div>
-'''
         for item in items:
-            summary_html = (
-                f'<p class="text-xs text-slate-400 leading-relaxed mt-1">{item["summary"]}</p>'
-                if item["summary"] else ""
-            )
-            html += f'''
-<a href="{item["link"]}" target="_blank" rel="noopener"
-   class="card p-4 flex gap-3 items-start {m["border"]} block no-underline mb-2">
+            read_t = _read_time(item["title"], item["summary"])
+            html += f'''<li><a href="{item["link"]}" target="_blank" rel="noopener"
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  <div class="w-16 h-16 rounded-xl {m["icon_bg"]} flex-shrink-0 flex items-center justify-center text-2xl">{m["icon"]}</div>
   <div class="flex-1">
-    <span class="tag {m["tag_cls"]} mb-1">📖 記事</span>
-    <p class="text-sm font-semibold text-slate-800 leading-snug">{item["title"]}</p>
-    {summary_html}
-    <p class="text-xs font-semibold text-brand-500 mt-2">続きを読む →</p>
+    <div class="flex gap-1 mb-1">
+      <span class="tag {m["tag_cls"]}">{m["label"]}</span>
+      <span class="tag bg-slate-100 text-slate-500">{read_t}</span>
+    </div>
+    <p class="text-sm font-semibold text-slate-700 leading-snug">{item["title"]}</p>
+    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
   </div>
-</a>
+</a></li>
 '''
+    html += "</ul>\n"
     return html
 
 
 def build_kanji_html(kanji: dict) -> str:
-    return f'''
-<div class="flex items-center gap-2 mt-5 mb-2">
-  <span class="section-label kanji">✏️ 漢字検定 準一級 — 今日の一問</span>
-</div>
-<div class="card p-4 border-l-4 border-amber-400 mb-2">
-  <p class="text-sm font-bold text-slate-800">{kanji["q"]}</p>
-  <details class="mt-3">
-    <summary class="text-xs font-semibold text-amber-600 cursor-pointer select-none">
-      ▶ 答えを見る
-    </summary>
-    <div class="mt-3 pt-3 border-t border-slate-100">
-      <p class="text-base font-bold text-slate-800">読み：{kanji["a"]}</p>
-      <p class="text-xs text-slate-500 mt-1">意味：{kanji["meaning"]}</p>
+    """漢字カード — 教育ブログの「featured article」スタイルで表示"""
+    return f'''<div class="card mb-1 overflow-hidden">
+  <div class="h-20 flex items-center justify-center"
+       style="background:linear-gradient(135deg,#fef3c7,#fde68a)">
+    <span class="text-4xl">✏️</span>
+  </div>
+  <div class="p-4">
+    <div class="flex gap-2 mb-2">
+      <span class="tag bg-amber-50 text-amber-600">漢字検定 準一級</span>
+      <span class="tag bg-slate-100 text-slate-500">今日の一問</span>
     </div>
-  </details>
+    <p class="text-sm font-bold text-slate-800 mb-1">{kanji["q"]}</p>
+    <details>
+      <summary class="text-sm text-brand-500 font-semibold mt-2 cursor-pointer select-none">答えを見る →</summary>
+      <div class="mt-3 pt-3 border-t border-slate-100">
+        <p class="text-base font-bold text-slate-800">読み：{kanji["a"]}</p>
+        <p class="text-xs text-slate-500 mt-1">意味：{kanji["meaning"]}</p>
+      </div>
+    </details>
+  </div>
 </div>
 '''
 
 
 def generate_html(content_type: str, items_by_source: list[tuple], now: datetime) -> str:
-    date_str = now.strftime("%Y年%m月%d日（%a） %H:%M JST")
+    time_str = now.strftime("%H:%M")
+    date_str = now.strftime("%Y年%m月%d日（%a）")
+
     if content_type == "morning":
-        heading      = "朝の記事"
-        title        = f"朝の記事 — {now.strftime('%m/%d')}"
-        header_color = "#2d6a4f"
-        accent_color = "#2d6a4f"
+        heading   = "朝の記事"
+        title     = f"朝の記事 — {now.strftime('%m/%d')}"
+        label_bg  = "#2d6a4f"
+        tabs      = ["すべて", "漢字一問", "社会ニュース", "文化・エンタメ"]
     else:
-        heading      = "昼の記事"
-        title        = f"昼の記事 — {now.strftime('%m/%d')}"
-        header_color = "#1a4a8a"
-        accent_color = "#1a4a8a"
+        heading   = "昼の記事"
+        title     = f"昼の記事 — {now.strftime('%m/%d')}"
+        label_bg  = "#0ea5e9"
+        tabs      = ["すべて", "科学・医療", "文化・エンタメ"]
 
-    body = build_body(items_by_source)
-    if not body:
-        body = '<div class="card"><p>現在取得できるニュースがありません。</p></div>'
+    tabs_html = "".join(
+        f'<button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full {"bg-brand-500 text-white" if i == 0 else "bg-slate-100 text-slate-500"}">{t}</button>'
+        for i, t in enumerate(tabs)
+    )
 
-    if content_type == "morning":
-        body = build_kanji_html(get_todays_kanji(now)) + body
+    article_body = build_body(items_by_source)
+    if not article_body or article_body == '<ul class="space-y-3">\n</ul>\n':
+        article_body = '<div class="card p-4"><p class="text-sm text-slate-500">現在取得できるニュースがありません。</p></div>'
+
+    kanji_block = build_kanji_html(get_todays_kanji(now)) if content_type == "morning" else ""
 
     return f"""<!DOCTYPE html>
 <html lang="ja">
@@ -200,51 +219,82 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {{
-    theme: {{
-      extend: {{
-        colors: {{
-          brand: {{
-            50: '#f0f7ff', 100: '#dbeeff', 200: '#b6dcfe',
-            300: '#75c0fc', 400: '#3aa2f8', 500: '#1183e9',
-            600: '#0566c7', 700: '#0552a1'
-          }}
-        }},
-        fontFamily: {{ sans: ['"Noto Sans JP"', 'sans-serif'] }}
-      }}
-    }}
-  }}
-</script>
+<script>tailwind.config={{theme:{{extend:{{colors:{{brand:{{50:'#f0f7ff',100:'#dbeeff',200:'#b6dcfe',300:'#75c0fc',400:'#3aa2f8',500:'#1183e9',600:'#0566c7',700:'#0552a1'}}}},fontFamily:{{sans:['"Noto Sans JP"','sans-serif']}}}}}}}}</script>
 <style>
-  body {{ background: #f1f5f9; }}
-  .card {{ background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }}
-  .section-label {{
-    display: inline-block; font-size: 11px; font-weight: 700;
-    padding: 3px 10px; border-radius: 99px; letter-spacing: .04em;
-    background: {header_color}; color: white;
-  }}
-  .section-label.kanji {{ background: #b45309; }}
-  .tag {{ font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; display: inline-block; }}
-  details summary {{ list-style: none; }}
-  details summary::-webkit-details-marker {{ display: none; }}
+  body{{background:#f1f5f9}}
+  .card{{background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}}
+  .tag{{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;display:inline-block}}
+  details summary{{list-style:none}}
+  details summary::-webkit-details-marker{{display:none}}
 </style>
 </head>
-<body class="font-sans min-h-screen pb-12">
+<body class="font-sans min-h-screen" style="background:#f1f5f9">
 
-  <!-- ヘッダー -->
-  <div style="background:{header_color}" class="px-5 pt-10 pb-5">
-    <p class="text-white text-xs font-medium opacity-75 mb-1">{date_str}</p>
-    <h1 class="text-white text-xl font-bold">{heading}</h1>
+  <!-- ステータスバー -->
+  <div class="bg-white px-6 pt-3 pb-2 flex justify-between items-center">
+    <span class="text-xs font-semibold text-slate-700">{time_str}</span>
+    <span class="text-xs text-slate-400">{date_str}</span>
+    <div class="flex gap-1 items-center text-slate-500">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33C16.4 22 17 21.4 17 20.67V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
   </div>
 
-  <!-- コンテンツ -->
-  <div class="max-w-xl mx-auto px-4 pt-5 space-y-1">
-    {body}
+  <!-- メインコンテンツ (画面03 記事一覧 と同レイアウト) -->
+  <div class="px-5 pt-3 pb-24">
+
+    <!-- タイトル行 -->
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-lg font-bold text-slate-800">{heading}</h1>
+      <button type="button" aria-label="ホームへ" onclick="history.back()"
+              class="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center">
+        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- フィルタータブ -->
+    <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
+      {tabs_html}
+    </div>
+
+    <!-- 漢字カード (朝のみ) -->
+    {kanji_block}
+
+    <!-- 記事リスト -->
+    {article_body}
+
   </div>
 
-  <!-- フッター -->
-  <p class="text-center text-xs text-slate-300 mt-10">山中優弥 専用 · yuuya-daily</p>
+  <!-- ボトムナビ (教育ブログと同じ構造) -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100
+              flex justify-around px-2 py-2 pb-4">
+    <a href="index.html"
+       class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-slate-400 no-underline">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="text-xs">ホーム</span>
+    </a>
+    <a href="morning.html"
+       class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center no-underline {"text-brand-500" if content_type == "morning" else "text-slate-400"}">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z"/>
+      </svg>
+      <span class="text-xs {"font-semibold" if content_type == "morning" else ""}">朝</span>
+    </a>
+    <a href="noon.html"
+       class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center no-underline {"text-brand-500" if content_type == "noon" else "text-slate-400"}">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <span class="text-xs {"font-semibold" if content_type == "noon" else ""}">昼</span>
+    </a>
+  </nav>
+
+  <!-- ホームインジケーター -->
+  <div class="fixed bottom-0 left-0 right-0 h-1 flex items-end justify-center pb-1 pointer-events-none">
+    <div class="w-32 h-1 bg-slate-300 rounded-full"></div>
+  </div>
 
 </body>
 </html>"""

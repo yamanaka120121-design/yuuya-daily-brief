@@ -3,53 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>yuuya-daily-brief</title>
+<title>yuuya-daily</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{brand:{50:'#f0f7ff',100:'#dbeeff',200:'#b6dcfe',300:'#75c0fc',400:'#3aa2f8',500:'#1183e9',600:'#0566c7',700:'#0552a1'}},fontFamily:{sans:['"Noto Sans JP"','sans-serif']}}}}</script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
-                 "Noto Sans JP", sans-serif;
-    background: #f4f5f7;
-    color: #222;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-    padding: 24px;
-  }
-  .container { max-width: 480px; width: 100%; }
-  h1 { font-size: 1.3em; font-weight: 700; margin-bottom: 6px; }
-  p  { font-size: 0.85em; color: #666; margin-bottom: 24px; line-height: 1.6; }
-  .links { display: flex; flex-direction: column; gap: 12px; }
-  a.card {
-    display: block;
-    background: white;
-    border-radius: 12px;
-    padding: 18px 20px;
-    text-decoration: none;
-    color: inherit;
-  }
-  a.card:hover { opacity: 0.85; }
-  .card-label { font-size: 0.7em; font-weight: 700; letter-spacing: 0.06em; }
-  .card-title { font-size: 1em; font-weight: 600; margin-top: 4px; }
-  .morning .card-label { color: #2d6a4f; }
-  .noon    .card-label { color: #1a4a8a; }
+  body{background:#f1f5f9}
+  .card{background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
 </style>
 </head>
-<body>
-<div class="container">
-  <h1>yuuya-daily-brief</h1>
-  <p>山中優弥 専用の自動配信記事です。<br>LINEのリンクからアクセスしてください。</p>
-  <div class="links">
-    <a class="card morning" href="morning.html">
-      <div class="card-label">MORNING · 6:30</div>
-      <div class="card-title">朝の記事</div>
-    </a>
-    <a class="card noon" href="noon.html">
-      <div class="card-label">NOON · 12:00</div>
-      <div class="card-title">昼の記事</div>
-    </a>
+<body class="font-sans min-h-screen" style="background:#f1f5f9">
+
+  <!-- ステータスバー -->
+  <div class="bg-white px-6 pt-3 pb-2 flex justify-between items-center">
+    <span class="text-xs font-semibold text-slate-700" id="clock">--:--</span>
+    <span class="text-xs text-slate-400" id="dateLabel"></span>
+    <div class="flex gap-1 items-center text-slate-500">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33C16.4 22 17 21.4 17 20.67V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
   </div>
-</div>
+
+  <!-- ホーム -->
+  <div class="px-5 pt-3 pb-24">
+
+    <!-- グリーティング -->
+    <div class="flex justify-between items-center mb-5 pt-2">
+      <div>
+        <p class="text-xs text-slate-400 font-medium" id="greeting-date"></p>
+        <h2 class="text-lg font-bold text-slate-800">おはようございます、ゆうや先生 ☀️</h2>
+      </div>
+      <div class="w-11 h-11 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
+        <span class="text-brand-600 font-bold text-sm">ゆ</span>
+      </div>
+    </div>
+
+    <!-- 朝の記事カード -->
+    <a href="morning.html" class="card p-4 mb-3 border-l-4 border-brand-500 block no-underline">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-xs font-bold px-3 py-1 rounded-full text-white" style="background:#2d6a4f">🌅 朝の記事</span>
+        <span class="text-xs text-slate-400">6:30 配信</span>
+      </div>
+      <p class="text-sm font-semibold text-slate-700 mb-1">漢字一問 + 今日のニュース</p>
+      <p class="text-sm text-slate-400 mb-3">社会・文化・エンタメのニュースをまとめています</p>
+      <p class="text-sm text-brand-500 font-semibold">朝の記事を開く →</p>
+    </a>
+
+    <!-- 昼の記事カード -->
+    <a href="noon.html" class="card p-4 mb-3 border-l-4 border-sky-400 block no-underline">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-xs font-bold px-3 py-1 rounded-full text-white" style="background:#0ea5e9">☀️ 昼の記事</span>
+        <span class="text-xs text-slate-400">12:00 更新</span>
+      </div>
+      <p class="text-sm font-semibold text-slate-700 mb-1">科学・医療 + 文化・エンタメ</p>
+      <p class="text-sm text-slate-400 mb-3">午後の授業・部活に活かせるニュース</p>
+      <p class="text-sm text-brand-500 font-semibold">昼の記事を開く →</p>
+    </a>
+
+  </div>
+
+  <!-- ボトムナビ -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100
+              flex justify-around px-2 py-2 pb-4">
+    <button type="button" class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-brand-500">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="text-xs font-semibold">ホーム</span>
+    </button>
+    <a href="morning.html" class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-slate-400 no-underline">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z"/>
+      </svg>
+      <span class="text-xs">朝</span>
+    </a>
+    <a href="noon.html" class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-slate-400 no-underline">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <span class="text-xs">昼</span>
+    </a>
+  </nav>
+
+  <!-- ホームインジケーター -->
+  <div class="fixed bottom-0 left-0 right-0 h-1 flex items-end justify-center pb-1 pointer-events-none">
+    <div class="w-32 h-1 bg-slate-300 rounded-full"></div>
+  </div>
+
+  <script>
+    const d = new Date();
+    const days = ['日','月','火','水','木','金','土'];
+    document.getElementById('clock').textContent =
+      d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    const label = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+    document.getElementById('dateLabel').textContent = label;
+    document.getElementById('greeting-date').textContent = label;
+  </script>
+
 </body>
 </html>
