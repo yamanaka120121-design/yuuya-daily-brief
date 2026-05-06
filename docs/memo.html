@@ -12,70 +12,84 @@
 <style>
   body{background:#f1f5f9}
   .card{background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
-  .tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;display:inline-block}
-  .tab-btn.active{background:#1183e9;color:white}
-  .tab-btn:not(.active){background:#f1f5f9;color:#64748b}
-  .fab{width:56px;height:56px;background:linear-gradient(135deg,#1183e9,#3aa2f8);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(17,131,233,.4);border:none;cursor:pointer;position:fixed;bottom:88px;right:20px;z-index:20}
-  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:30;display:flex;align-items:flex-end}
-  .modal-sheet{background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:600px;margin:0 auto}
   textarea{resize:none;outline:none}
   textarea:focus{box-shadow:0 0 0 2px #1183e9}
-  .cat-btn.selected{box-shadow:0 0 0 2px #1183e9;background:#f0f7ff;color:#1183e9;font-weight:700}
+  .tag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:99px;display:inline-block}
+
+  /* 履歴ドロワー */
+  .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+  .drawer-overlay.open{opacity:1;pointer-events:auto}
+  .drawer-sheet{background:white;border-radius:24px 24px 0 0;width:100%;max-width:600px;margin:0 auto;max-height:88vh;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .28s cubic-bezier(.32,.72,0,1)}
+  .drawer-overlay.open .drawer-sheet{transform:translateY(0)}
+
+  /* FAB */
+  .fab-history{width:56px;height:56px;background:white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.15);border:none;cursor:pointer;position:fixed;bottom:88px;right:20px;z-index:20}
+
+  /* タブ */
+  .tab-btn.active{background:#1183e9;color:white}
+  .tab-btn:not(.active){background:#f1f5f9;color:#64748b}
+
+  /* AI分類バッジアニメ */
+  @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .ai-badge{animation:fadein .2s ease}
 </style>
 </head>
 <body class="font-sans min-h-screen" style="background:#f1f5f9">
 
-  <!-- ステータスバー -->
-  <div class="bg-white px-6 pt-3 pb-2 flex justify-between items-center">
-    <span class="text-xs font-semibold text-slate-700" id="clock">--:--</span>
-    <span class="text-xs text-slate-400" id="dateLabel"></span>
-    <div class="flex gap-1 items-center text-slate-500">
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33C16.4 22 17 21.4 17 20.67V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
-    </div>
-  </div>
-
   <!-- ヘッダー -->
-  <div class="px-5 pt-3 pb-0">
-    <div class="flex justify-between items-center mb-1">
-      <h1 class="text-lg font-bold text-slate-800">メモ</h1>
-      <button id="exportBtn" type="button" title="Sheetsにエクスポート"
-              class="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center hover:bg-slate-200">
-        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-        </svg>
-      </button>
+  <div class="bg-white px-5 pt-5 pb-4 flex justify-between items-center shadow-sm">
+    <div>
+      <h1 class="text-base font-bold text-slate-800">メモ</h1>
+      <p class="text-xs text-slate-400" id="dateLabel">読み込み中…</p>
     </div>
-    <p class="text-sm text-slate-400 mb-4">あなたの気づきが、明日の授業を変えます</p>
+    <a href="index.html"
+       class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center no-underline">
+      <svg class="w-4 h-4 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+    </a>
+  </div>
 
-    <!-- フィルタータブ -->
-    <div class="flex gap-2 mb-4 overflow-x-auto pb-1" id="tabRow">
-      <button type="button" data-cat="すべて" class="tab-btn active flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">すべて</button>
-      <button type="button" data-cat="授業のメモ" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">授業のメモ</button>
-      <button type="button" data-cat="部活" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">部活</button>
-      <button type="button" data-cat="今日の良かったこと" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">今日の良かったこと</button>
-      <button type="button" data-cat="発見・アイデア" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">発見・アイデア</button>
+  <!-- 書き込みエリア -->
+  <div class="px-5 pt-5 pb-32">
+    <div class="card p-4">
+
+      <!-- AI分類バッジ -->
+      <div class="flex items-center gap-2 mb-3 min-h-[24px]" id="aiBadgeWrap">
+        <span class="text-xs text-slate-400">AIが自動でカテゴリを判定します</span>
+      </div>
+
+      <!-- テキストエリア -->
+      <textarea id="memoInput" rows="8" maxlength="200"
+        placeholder="思ったことをそのまま書いてください。
+AI がカテゴリを自動で判定します。
+
+例）
+・3年B組の田中くん、今日の古典の授業で初めて手を挙げた
+・合奏でトロンボーンのバランスが整ってきた
+・読書感想文の採点、この子の感性は本物だ"
+        class="w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-700 leading-relaxed"
+      ></textarea>
+
+      <!-- 文字数 & 保存 -->
+      <div class="flex justify-between items-center mt-3">
+        <span id="charCount" class="text-xs text-slate-400">0 / 200</span>
+        <button id="saveBtn" type="button"
+                class="px-6 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-bold
+                       disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled>
+          保存する
+        </button>
+      </div>
+
+    </div>
+
+    <!-- 保存完了トースト -->
+    <div id="toast"
+         class="hidden fixed top-6 left-1/2 -translate-x-1/2 z-50
+                bg-slate-800 text-white text-xs font-semibold px-5 py-2.5 rounded-full shadow-lg">
     </div>
   </div>
-
-  <!-- メモ一覧 -->
-  <div class="px-5 pb-32 space-y-3" id="memoList">
-    <!-- JSで描画 -->
-  </div>
-
-  <!-- 空の状態 -->
-  <div id="emptyState" class="hidden px-5 py-16 text-center">
-    <div class="text-5xl mb-4">✏️</div>
-    <p class="text-sm font-semibold text-slate-500">まだメモがありません</p>
-    <p class="text-xs text-slate-400 mt-1">右下の＋ボタンから記録しましょう</p>
-  </div>
-
-  <!-- FAB -->
-  <button class="fab" id="openModal" aria-label="メモを追加">
-    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-    </svg>
-  </button>
 
   <!-- ボトムナビ -->
   <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around px-2 py-2 pb-4 z-10">
@@ -103,213 +117,268 @@
     </button>
   </nav>
 
-  <!-- メモ追加モーダル -->
-  <div id="modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
-    <div class="modal-sheet w-full">
-      <div class="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5"></div>
-      <h2 class="text-base font-bold text-slate-800 mb-4">メモを追加</h2>
+  <!-- 履歴FAB（右下） -->
+  <button class="fab-history" id="historyBtn" aria-label="過去のメモを見る" title="記録を見る">
+    <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+  </button>
 
-      <!-- カテゴリ選択 -->
-      <p class="text-xs font-semibold text-slate-500 mb-2">カテゴリ</p>
-      <div class="flex flex-wrap gap-2 mb-4" id="catBtns">
-        <button type="button" data-cat="授業のメモ"       class="cat-btn tag bg-violet-50 text-violet-600 selected">授業のメモ</button>
-        <button type="button" data-cat="部活"             class="cat-btn tag bg-rose-50 text-rose-600">部活</button>
-        <button type="button" data-cat="今日の良かったこと" class="cat-btn tag bg-green-50 text-green-600">今日の良かったこと</button>
-        <button type="button" data-cat="発見・アイデア"   class="cat-btn tag bg-amber-50 text-amber-600">発見・アイデア</button>
+  <!-- 履歴ドロワー -->
+  <div class="drawer-overlay" id="drawerOverlay">
+    <div class="drawer-sheet" id="drawerSheet">
+      <!-- ハンドル -->
+      <div class="pt-3 pb-1 flex justify-center flex-shrink-0">
+        <div class="w-10 h-1 bg-slate-200 rounded-full"></div>
       </div>
 
-      <!-- 内容入力 -->
-      <p class="text-xs font-semibold text-slate-500 mb-2">内容 <span class="text-slate-400 font-normal">（140字まで）</span></p>
-      <div class="relative">
-        <textarea id="memoInput" rows="4" maxlength="140" placeholder="今日の気づき、生徒の言葉、部活での発見を書いてみよう…"
-                  class="w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-700 leading-relaxed"
-        ></textarea>
-        <span id="charCount" class="absolute bottom-2 right-3 text-xs text-slate-400">0 / 140</span>
+      <!-- ドロワーヘッダー -->
+      <div class="px-5 py-3 flex justify-between items-center flex-shrink-0">
+        <h2 class="text-base font-bold text-slate-800">過去のメモ <span id="memoCountBadge" class="text-sm font-normal text-slate-400"></span></h2>
+        <div class="flex gap-2">
+          <button id="exportBtn" type="button" title="全件をクリップボードにコピー"
+                  class="flex items-center gap-1 text-xs font-semibold text-slate-500 px-3 py-1.5 bg-slate-100 rounded-full">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            一括コピー
+          </button>
+          <button id="closeDrawer" type="button"
+                  class="w-8 h-8 flex items-center justify-center text-slate-400 bg-slate-100 rounded-full text-sm font-bold">
+            ✕
+          </button>
+        </div>
       </div>
 
-      <!-- ボタン -->
-      <div class="flex gap-3 mt-4">
-        <button id="cancelModal" type="button"
-                class="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-semibold text-sm">
-          キャンセル
-        </button>
-        <button id="saveModal" type="button"
-                class="flex-1 py-3 rounded-xl bg-brand-500 text-white font-semibold text-sm">
-          保存する
-        </button>
+      <!-- フィルタータブ -->
+      <div class="px-5 pb-3 flex gap-2 overflow-x-auto flex-shrink-0">
+        <button type="button" data-cat="すべて" class="tab-btn active flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full">すべて</button>
+        <button type="button" data-cat="授業のメモ" class="tab-btn flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full">授業</button>
+        <button type="button" data-cat="部活" class="tab-btn flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full">部活</button>
+        <button type="button" data-cat="今日の良かったこと" class="tab-btn flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full">良かったこと</button>
+        <button type="button" data-cat="発見・アイデア" class="tab-btn flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full">アイデア</button>
+        <button type="button" data-cat="教育・学校" class="tab-btn flex-shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full">教育</button>
       </div>
+
+      <!-- メモ一覧（スクロール） -->
+      <div class="flex-1 overflow-y-auto px-5 pb-6 space-y-3" id="historyList">
+        <!-- JS描画 -->
+      </div>
+
+      <!-- 空の状態 -->
+      <div id="historyEmpty" class="hidden flex-1 flex flex-col items-center justify-center pb-12 text-center">
+        <div class="text-4xl mb-3">📝</div>
+        <p class="text-sm font-semibold text-slate-500">まだメモがありません</p>
+        <p class="text-xs text-slate-400 mt-1">上の入力欄から記録を始めましょう</p>
+      </div>
+
     </div>
   </div>
 
   <script>
-  /* ────────────────── データ管理 ────────────────── */
-  const STORAGE_KEY = 'yuuya_memos_v1';
-  const CAT_STYLES = {
-    '授業のメモ':        'bg-violet-50 text-violet-600 border-l-4 border-violet-400',
-    '部活':              'bg-rose-50   text-rose-600   border-l-4 border-rose-400',
-    '今日の良かったこと': 'bg-green-50  text-green-600  border-l-4 border-green-400',
-    '発見・アイデア':    'bg-amber-50  text-amber-600  border-l-4 border-amber-300',
+  /* ─── 定数 ─── */
+  const STORAGE_KEY = 'yuuya_memos_v2';
+  const CAT_META = {
+    '授業のメモ':        { tag: 'bg-violet-100 text-violet-700', border: 'border-l-4 border-violet-400' },
+    '部活':              { tag: 'bg-rose-100   text-rose-700',   border: 'border-l-4 border-rose-400'   },
+    '今日の良かったこと': { tag: 'bg-green-100  text-green-700',  border: 'border-l-4 border-green-400'  },
+    '発見・アイデア':    { tag: 'bg-amber-100  text-amber-700',  border: 'border-l-4 border-amber-400'  },
+    '教育・学校':        { tag: 'bg-sky-100    text-sky-700',    border: 'border-l-4 border-sky-400'    },
   };
-  const TAG_STYLES = {
-    '授業のメモ':        'bg-violet-50 text-violet-600',
-    '部活':              'bg-rose-50   text-rose-600',
-    '今日の良かったこと': 'bg-green-50  text-green-600',
-    '発見・アイデア':    'bg-amber-50  text-amber-600',
-  };
+  const DEFAULT_CAT = '授業のメモ';
 
+  /* ─── データ ─── */
   function loadMemos() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
     catch { return []; }
   }
-  function saveMemos(memos) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
-  }
-  function deleteMemo(id) {
-    const memos = loadMemos().filter(m => m.id !== id);
-    saveMemos(memos);
-    renderMemos(currentCat);
+  function saveMemos(arr) { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+
+  /* ─── AI 自動分類（キーワードスコアリング） ─── */
+  const RULES = [
+    { cat: '授業のメモ',
+      words: ['授業','国語','古典','現代文','漢字','読む','書く','生徒','板書','評価','テスト','単元','教材','指導案','学習','ホームルーム','HR','クラス','教科','読解','文法','古文','漢文','文学','詩','俳句','短歌','作文','発表','授業中','朝礼'] },
+    { cat: '部活',
+      words: ['部活','吹奏楽','演奏','練習','コンクール','楽器','指揮','合奏','金管','木管','打楽器','音楽','楽譜','音','アンサンブル','定期演奏会','マーチング','部員','合宿','バンド'] },
+    { cat: '今日の良かったこと',
+      words: ['嬉しい','よかった','良かった','感動','ありがとう','笑','楽しかった','幸せ','うれしい','救われた','感謝','ほっこり','癒され','温かかった','心に刺さった','涙'] },
+    { cat: '発見・アイデア',
+      words: ['アイデア','発見','気づき','思いついた','試したい','かも','工夫','試み','面白い','おもしろい','可能性','どうだろう','仮説','実験','挑戦','改善','新しい'] },
+    { cat: '教育・学校',
+      words: ['学校','教育','先生','保護者','委員会','図書','文部','学力','校務','会議','研修','進路','入試','奈良','職員'] },
+  ];
+
+  function autoClassify(text) {
+    if (!text.trim()) return DEFAULT_CAT;
+    const scores = {};
+    RULES.forEach(r => {
+      scores[r.cat] = r.words.filter(w => text.includes(w)).length;
+    });
+    const max = Math.max(...Object.values(scores));
+    if (max === 0) return DEFAULT_CAT;
+    return Object.keys(scores).find(k => scores[k] === max) || DEFAULT_CAT;
   }
 
-  /* ────────────────── 描画 ────────────────── */
+  /* ─── UI更新 ─── */
   let currentCat = 'すべて';
+  let detectedCat = DEFAULT_CAT;
 
-  function relativeTime(ts) {
-    const diff = Date.now() - ts;
-    const m = Math.floor(diff / 60000);
-    if (m < 1)   return 'たった今';
-    if (m < 60)  return `${m}分前`;
+  function updateBadge(text) {
+    const cat = autoClassify(text);
+    detectedCat = cat;
+    const meta = CAT_META[cat] || {};
+    const wrap = document.getElementById('aiBadgeWrap');
+    wrap.innerHTML = text.trim()
+      ? `<span class="text-xs text-slate-400">AIが判定：</span>
+         <span class="tag ai-badge ${meta.tag || 'bg-slate-100 text-slate-500'}">${cat}</span>`
+      : `<span class="text-xs text-slate-400">AIが自動でカテゴリを判定します</span>`;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function relTime(ts) {
+    const m = Math.floor((Date.now() - ts) / 60000);
+    if (m < 1) return 'たった今';
+    if (m < 60) return `${m}分前`;
     const h = Math.floor(m / 60);
-    if (h < 24)  return `${h}時間前`;
+    if (h < 24) return `${h}時間前`;
     const d = Math.floor(h / 24);
-    if (d < 7)   return `${d}日前`;
+    if (d < 7) return `${d}日前`;
     return new Date(ts).toLocaleDateString('ja-JP', {month:'numeric', day:'numeric'});
   }
 
-  function renderMemos(cat) {
+  function renderHistory(cat) {
     currentCat = cat;
-    const all   = loadMemos();
+    const all   = loadMemos().slice().reverse();
     const items = cat === 'すべて' ? all : all.filter(m => m.category === cat);
-    const list  = document.getElementById('memoList');
-    const empty = document.getElementById('emptyState');
+    const list  = document.getElementById('historyList');
+    const empty = document.getElementById('historyEmpty');
+    const countEl = document.getElementById('memoCountBadge');
+
+    countEl.textContent = `（${loadMemos().length}件）`;
 
     if (items.length === 0) {
-      list.innerHTML  = '';
+      list.classList.add('hidden');
       empty.classList.remove('hidden');
       return;
     }
+    list.classList.remove('hidden');
     empty.classList.add('hidden');
 
-    list.innerHTML = items.slice().reverse().map(m => {
-      const border   = (CAT_STYLES[m.category] || '').split(' ').filter(c=>c.startsWith('border')).join(' ');
-      const tagStyle = TAG_STYLES[m.category] || 'bg-slate-100 text-slate-500';
+    list.innerHTML = items.map(m => {
+      const meta = CAT_META[m.category] || { tag:'bg-slate-100 text-slate-500', border:'' };
       return `
-        <div class="card p-4 ${border}">
+        <div class="card p-4 ${meta.border}">
           <div class="flex justify-between items-start mb-2">
-            <span class="tag ${tagStyle}">${m.category}</span>
+            <span class="tag ${meta.tag}">${m.category}</span>
             <div class="flex items-center gap-2">
-              <span class="text-xs text-slate-400">${relativeTime(m.ts)}</span>
+              <span class="text-xs text-slate-400">${relTime(m.ts)}</span>
               <button type="button" onclick="deleteMemo('${m.id}')"
-                      class="text-slate-300 hover:text-red-400 text-xs leading-none" aria-label="削除">✕</button>
+                      class="text-slate-300 hover:text-red-400 text-xs" aria-label="削除">✕</button>
             </div>
           </div>
-          <p class="text-sm text-slate-700 leading-relaxed font-medium">${escHtml(m.content)}</p>
+          <p class="text-sm text-slate-700 leading-relaxed">${escHtml(m.content)}</p>
         </div>`;
     }).join('');
   }
 
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function deleteMemo(id) {
+    saveMemos(loadMemos().filter(m => m.id !== id));
+    renderHistory(currentCat);
   }
 
-  /* ────────────────── タブ ────────────────── */
-  document.querySelectorAll('#tabRow .tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#tabRow .tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderMemos(btn.dataset.cat);
-    });
-  });
+  /* ─── トースト ─── */
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    setTimeout(() => t.classList.add('hidden'), 2200);
+  }
 
-  /* ────────────────── モーダル ────────────────── */
-  let selectedCat = '授業のメモ';
-
-  document.getElementById('openModal').addEventListener('click', () => {
-    document.getElementById('modal').classList.remove('hidden');
-    document.getElementById('memoInput').value = '';
-    document.getElementById('charCount').textContent = '0 / 140';
-    document.getElementById('memoInput').focus();
-  });
-  document.getElementById('cancelModal').addEventListener('click', () => {
-    document.getElementById('modal').classList.add('hidden');
-  });
-  document.getElementById('modal').addEventListener('click', e => {
-    if (e.target === document.getElementById('modal'))
-      document.getElementById('modal').classList.add('hidden');
-  });
-
-  document.querySelectorAll('#catBtns .cat-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#catBtns .cat-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      selectedCat = btn.dataset.cat;
-    });
-  });
-
-  document.getElementById('memoInput').addEventListener('input', function() {
-    document.getElementById('charCount').textContent = `${this.value.length} / 140`;
-  });
-
-  document.getElementById('saveModal').addEventListener('click', () => {
+  /* ─── 保存 ─── */
+  document.getElementById('saveBtn').addEventListener('click', () => {
     const content = document.getElementById('memoInput').value.trim();
     if (!content) return;
     const memos = loadMemos();
     memos.push({
       id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-      category: selectedCat,
+      category: detectedCat,
       content,
       ts: Date.now(),
     });
     saveMemos(memos);
-    document.getElementById('modal').classList.add('hidden');
-    // タブを「すべて」に戻して再描画
-    document.querySelectorAll('#tabRow .tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelector('#tabRow .tab-btn[data-cat="すべて"]').classList.add('active');
-    renderMemos('すべて');
+    document.getElementById('memoInput').value = '';
+    document.getElementById('charCount').textContent = '0 / 200';
+    document.getElementById('saveBtn').disabled = true;
+    updateBadge('');
+    showToast(`✓ 「${detectedCat}」として保存しました`);
   });
 
-  /* ────────────────── エクスポート (Google Sheets 用) ────────────────── */
+  /* ─── 入力ハンドラ ─── */
+  document.getElementById('memoInput').addEventListener('input', function() {
+    const len = this.value.length;
+    document.getElementById('charCount').textContent = `${len} / 200`;
+    document.getElementById('saveBtn').disabled = len === 0;
+    updateBadge(this.value);
+  });
+
+  /* ─── 履歴ドロワー ─── */
+  function openDrawer() {
+    renderHistory(currentCat);
+    document.getElementById('drawerOverlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDrawer() {
+    document.getElementById('drawerOverlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('historyBtn').addEventListener('click', openDrawer);
+  document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
+  document.getElementById('drawerOverlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('drawerOverlay')) closeDrawer();
+  });
+
+  /* ─── タブ ─── */
+  document.querySelectorAll('.drawer-sheet .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.drawer-sheet .tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderHistory(btn.dataset.cat);
+    });
+  });
+
+  /* ─── 一括コピー ─── */
   document.getElementById('exportBtn').addEventListener('click', () => {
     const memos = loadMemos();
-    if (memos.length === 0) { alert('エクスポートするメモがありません'); return; }
+    if (!memos.length) { showToast('メモがまだありません'); return; }
     const header = '日時\tカテゴリ\t内容';
-    const rows   = memos.map(m => {
+    const rows = memos.map(m => {
       const d = new Date(m.ts).toLocaleString('ja-JP');
       return `${d}\t${m.category}\t${m.content}`;
     });
     const tsv = [header, ...rows].join('\n');
-    navigator.clipboard.writeText(tsv).then(() => {
-      alert('📋 クリップボードにコピーしました！\nGoogle Sheets を開いてセルA1に貼り付けてください。');
-    }).catch(() => {
-      // fallback
-      const ta = document.createElement('textarea');
-      ta.value = tsv;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      alert('📋 クリップボードにコピーしました！\nGoogle Sheets を開いてセルA1に貼り付けてください。');
-    });
+    navigator.clipboard.writeText(tsv)
+      .then(() => showToast('📋 クリップボードにコピーしました'))
+      .catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = tsv;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showToast('📋 クリップボードにコピーしました');
+      });
   });
 
-  /* ────────────────── 時計 & 初期描画 ────────────────── */
+  /* ─── 初期化 ─── */
   (function init() {
     const d    = new Date();
     const days = ['日','月','火','水','木','金','土'];
-    document.getElementById('clock').textContent =
-      d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
     document.getElementById('dateLabel').textContent =
       `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
-    renderMemos('すべて');
   })();
   </script>
 

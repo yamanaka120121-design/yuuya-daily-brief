@@ -16,18 +16,8 @@
 </head>
 <body class="font-sans min-h-screen pb-28" style="background:#f1f5f9">
 
-  <!-- ステータスバー -->
-  <div class="bg-white px-6 pt-3 pb-2 flex justify-between items-center">
-    <span class="text-xs font-semibold text-slate-700" id="clock">--:--</span>
-    <span class="text-xs text-slate-400" id="dateLabel"></span>
-    <div class="flex gap-1 items-center text-slate-500">
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33C16.4 22 17 21.4 17 20.67V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
-    </div>
-  </div>
-
   <!-- ヘッダー -->
-  <div class="px-5 pt-3 pb-0">
+  <div class="px-5 pt-5 pb-0">
     <div class="flex justify-between items-center mb-1">
       <h1 class="text-lg font-bold text-slate-800">過去の記事</h1>
       <a href="index.html"
@@ -82,12 +72,10 @@
   </nav>
 
   <script>
-    /* 時刻 */
+    /* 日付 */
     (function(){
       const d = new Date();
       const days = ['日','月','火','水','木','金','土'];
-      document.getElementById('clock').textContent =
-        d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
       document.getElementById('dateLabel').textContent =
         `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
     })();

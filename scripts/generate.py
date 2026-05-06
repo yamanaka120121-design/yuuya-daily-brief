@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 yuuya-daily-brief — メイン生成スクリプト
-RSS取得 → (OpenAI 要約) → HTML生成（漢字一問付き）→ LINE送信
+RSS取得 → Claude要約 → HTML生成（漢字5問付き）→ LINE送信
 """
 
 import argparse
@@ -11,70 +11,148 @@ import re
 import textwrap
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from urllib.parse import quote
 
 import feedparser
 import requests
 
 JST = timezone(timedelta(hours=9))
 
-# ─── RSS フィード定義 ──────────────────────────────────────────────────────────
-# (表示名, URL, 取得件数)  ← SOURCE_META のキーが表示名に含まれていること
 
-_GN = "https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q="
+# ─── RSS フィード定義 ──────────────────────────────────────────────────────────
+def _gn(query: str) -> str:
+    """Google News RSS URL（日本語クエリを直接渡せるヘルパー）"""
+    return f"https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q={quote(query)}"
 
 MORNING_FEEDS = [
-    # 朝礼トークの素材（奈良・教育・吹奏楽に絞る）
-    ("奈良のニュース",  _GN + "%E5%A5%88%E8%89%AF",                               2),  # 奈良
-    ("教育ニュース",    _GN + "%E9%AB%98%E6%A0%A1+%E6%95%99%E5%93%A1+%E6%8C%87%E5%B0%8E", 2),  # 高校+教員+指導
-    ("吹奏楽・音楽",   _GN + "%E5%90%B9%E5%A5%8F%E6%A5%BD",                      2),  # 吹奏楽
+    # NHK奈良ローカルニュース（地元密着・千葉など他県が混入しない）
+    ("奈良のニュース",  "https://www3.nhk.or.jp/lnews/nara/rss/03.xml",              2),
+    # 奈良×教育×高校に絞ったGoogle News
+    ("教育ニュース",    _gn("奈良 高校教育 OR 音楽教育 OR 国語教育"),                2),
+    # 吹奏楽・音楽教育（音楽教育まで広げる）
+    ("音楽教育",        _gn("吹奏楽 OR 音楽教育 高校 OR コンクール"),                2),
 ]
 
 NOON_FEEDS = [
-    # 授業・部活・図書委員会の準備素材
-    ("教育ニュース",   _GN + "%E6%8E%88%E6%A5%AD+%E5%AD%A6%E7%BF%92+%E9%AB%98%E6%A0%A1", 2),  # 授業+学習+高校
-    ("吹奏楽・音楽",  _GN + "%E5%90%B9%E5%A5%8F%E6%A5%BD+%E3%82%B3%E3%83%B3%E3%82%AF%E3%83%BC%E3%83%AB", 2),  # 吹奏楽+コンクール
-    ("国語・図書",    _GN + "%E5%9B%BD%E8%AA%9E+%E8%AA%AD%E6%9B%B8+%E5%9B%B3%E6%9B%B8%E9%A4%A8",          2),  # 国語+読書+図書館
+    # NHK文化・科学（教育・読書関連が多い）
+    ("教育ニュース",    "https://www3.nhk.or.jp/rss/news/cat5.xml",                  2),
+    # 吹奏楽・音楽教育
+    ("吹奏楽・音楽",   _gn("吹奏楽 コンクール OR 音楽教育"),                        2),
+    # 国語教育・読書・図書館
+    ("国語・図書",     _gn("国語教育 OR 読書教育 OR 図書館 高校 OR 学校"),           2),
 ]
 
-# ─── 漢字検定準一級 日替わり一問 ──────────────────────────────────────────────
+# ─── 漢字検定準一級 日替わり5問 ──────────────────────────────────────────────
 
 KANJI_QUESTIONS = [
-    {"q": "「齟齬」の読みは？",          "a": "そご",           "meaning": "物事がうまくかみ合わないこと"},
-    {"q": "「蹉跌」の読みは？",          "a": "さてつ",         "meaning": "つまずき、失敗すること"},
-    {"q": "「逡巡」の読みは？",          "a": "しゅんじゅん",   "meaning": "ためらって前に進めないこと"},
-    {"q": "「忸怩」の読みは？",          "a": "じくじ",         "meaning": "恥ずかしく思うさま"},
-    {"q": "「闊歩」の読みは？",          "a": "かっぽ",         "meaning": "大股で堂々と歩くこと"},
-    {"q": "「恬淡」の読みは？",          "a": "てんたん",       "meaning": "物事にこだわらず、さっぱりしているさま"},
-    {"q": "「蒙昧」の読みは？",          "a": "もうまい",       "meaning": "道理に暗く、無知なさま"},
-    {"q": "「慫慂」の読みは？",          "a": "しょうよう",     "meaning": "すすめてそうさせること"},
-    {"q": "「杳として」の読みは？",      "a": "ようとして",     "meaning": "遠くて消息が不明なさま"},
-    {"q": "「矍鑠」の読みは？",          "a": "かくしゃく",     "meaning": "老いても元気で丈夫なさま"},
-    {"q": "「啻に」の読みは？",          "a": "ただに",         "meaning": "ただそれだけでなく（〜のみならず）"},
-    {"q": "「憧憬」の読みは？",          "a": "しょうけい",     "meaning": "あこがれること"},
-    {"q": "「諧謔」の読みは？",          "a": "かいぎゃく",     "meaning": "ユーモア、冗談"},
-    {"q": "「贖罪」の読みは？",          "a": "しょくざい",     "meaning": "罪をつぐなうこと"},
-    {"q": "「嗜好」の読みは？",          "a": "しこう",         "meaning": "好んで楽しむこと"},
-    {"q": "「逼迫」の読みは？",          "a": "ひっぱく",       "meaning": "さしせまって余裕がなくなること"},
-    {"q": "「慇懃」の読みは？",          "a": "いんぎん",       "meaning": "礼儀正しく丁寧なさま"},
-    {"q": "「幽邃」の読みは？",          "a": "ゆうすい",       "meaning": "奥深く静かで趣のあるさま"},
-    {"q": "「澎湃」の読みは？",          "a": "ほうはい",       "meaning": "勢いが盛んに起こるさま"},
-    {"q": "「蹌踉」の読みは？",          "a": "そうろう",       "meaning": "よろよろと歩くさま"},
-    {"q": "「饗宴」の読みは？",          "a": "きょうえん",     "meaning": "盛大なもてなしの宴"},
-    {"q": "「僭越」の読みは？",          "a": "せんえつ",       "meaning": "身分や立場を越えて出過ぎること"},
-    {"q": "「杞憂」の読みは？",          "a": "きゆう",         "meaning": "必要のない心配をすること"},
-    {"q": "「蟄居」の読みは？",          "a": "ちっきょ",       "meaning": "家の中に閉じこもること"},
-    {"q": "「捧腹絶倒」の読みは？",      "a": "ほうふくぜっとう","meaning": "腹を抱えて大笑いすること"},
-    {"q": "「頓挫」の読みは？",          "a": "とんざ",         "meaning": "物事が途中で行き詰まること"},
-    {"q": "「罵倒」の読みは？",          "a": "ばとう",         "meaning": "激しくののしること"},
-    {"q": "「縹渺」の読みは？",          "a": "ひょうびょう",   "meaning": "広くはるかに広がるさま"},
-    {"q": "「驥尾に付す」の読みは？",    "a": "きびにふす",     "meaning": "すぐれた人に従って功を得ること"},
-    {"q": "「諄諄」の読みは？",          "a": "じゅんじゅん",   "meaning": "丁寧にくり返し言い聞かせるさま"},
+    # ── 読み問題 ──
+    {"q": "「齟齬」の読みは？",           "a": "そご",              "meaning": "物事がうまくかみ合わないこと"},
+    {"q": "「蹉跌」の読みは？",           "a": "さてつ",            "meaning": "つまずき、失敗すること"},
+    {"q": "「逡巡」の読みは？",           "a": "しゅんじゅん",      "meaning": "ためらって前に進めないこと"},
+    {"q": "「忸怩」の読みは？",           "a": "じくじ",            "meaning": "恥ずかしく思うさま"},
+    {"q": "「闊歩」の読みは？",           "a": "かっぽ",            "meaning": "大股で堂々と歩くこと"},
+    {"q": "「恬淡」の読みは？",           "a": "てんたん",          "meaning": "物事にこだわらず、さっぱりしているさま"},
+    {"q": "「蒙昧」の読みは？",           "a": "もうまい",          "meaning": "道理に暗く、無知なさま"},
+    {"q": "「慫慂」の読みは？",           "a": "しょうよう",        "meaning": "すすめてそうさせること"},
+    {"q": "「杳として」の読みは？",       "a": "ようとして",        "meaning": "遠くて消息が不明なさま"},
+    {"q": "「矍鑠」の読みは？",           "a": "かくしゃく",        "meaning": "老いても元気で丈夫なさま"},
+    {"q": "「啻に」の読みは？",           "a": "ただに",            "meaning": "ただそれだけでなく（〜のみならず）"},
+    {"q": "「憧憬」の読みは？",           "a": "しょうけい",        "meaning": "あこがれること"},
+    {"q": "「諧謔」の読みは？",           "a": "かいぎゃく",        "meaning": "ユーモア、冗談"},
+    {"q": "「贖罪」の読みは？",           "a": "しょくざい",        "meaning": "罪をつぐなうこと"},
+    {"q": "「嗜好」の読みは？",           "a": "しこう",            "meaning": "好んで楽しむこと"},
+    {"q": "「逼迫」の読みは？",           "a": "ひっぱく",          "meaning": "さしせまって余裕がなくなること"},
+    {"q": "「慇懃」の読みは？",           "a": "いんぎん",          "meaning": "礼儀正しく丁寧なさま"},
+    {"q": "「幽邃」の読みは？",           "a": "ゆうすい",          "meaning": "奥深く静かで趣のあるさま"},
+    {"q": "「澎湃」の読みは？",           "a": "ほうはい",          "meaning": "勢いが盛んに起こるさま"},
+    {"q": "「蹌踉」の読みは？",           "a": "そうろう",          "meaning": "よろよろと歩くさま"},
+    {"q": "「饗宴」の読みは？",           "a": "きょうえん",        "meaning": "盛大なもてなしの宴"},
+    {"q": "「僭越」の読みは？",           "a": "せんえつ",          "meaning": "身分や立場を越えて出過ぎること"},
+    {"q": "「杞憂」の読みは？",           "a": "きゆう",            "meaning": "必要のない心配をすること"},
+    {"q": "「蟄居」の読みは？",           "a": "ちっきょ",          "meaning": "家の中に閉じこもること"},
+    {"q": "「捧腹絶倒」の読みは？",       "a": "ほうふくぜっとう",  "meaning": "腹を抱えて大笑いすること"},
+    {"q": "「頓挫」の読みは？",           "a": "とんざ",            "meaning": "物事が途中で行き詰まること"},
+    {"q": "「罵倒」の読みは？",           "a": "ばとう",            "meaning": "激しくののしること"},
+    {"q": "「縹渺」の読みは？",           "a": "ひょうびょう",      "meaning": "広くはるかに広がるさま"},
+    {"q": "「驥尾に付す」の読みは？",     "a": "きびにふす",        "meaning": "すぐれた人に従って功を得ること"},
+    {"q": "「諄諄」の読みは？",           "a": "じゅんじゅん",      "meaning": "丁寧にくり返し言い聞かせるさま"},
+    # ── 追加（読み） ──
+    {"q": "「跋扈」の読みは？",           "a": "ばっこ",            "meaning": "権力をかさに着てのさばること"},
+    {"q": "「欺瞞」の読みは？",           "a": "ぎまん",            "meaning": "だますこと"},
+    {"q": "「傀儡」の読みは？",           "a": "かいらい",          "meaning": "あやつり人形。他人の意のままになる人"},
+    {"q": "「渾身」の読みは？",           "a": "こんしん",          "meaning": "全身・全力"},
+    {"q": "「韜晦」の読みは？",           "a": "とうかい",          "meaning": "才能・地位などを隠すこと"},
+    {"q": "「蹂躙」の読みは？",           "a": "じゅうりん",        "meaning": "ふみにじること"},
+    {"q": "「纏綿」の読みは？",           "a": "てんめん",          "meaning": "離れられないでまとわりつくさま"},
+    {"q": "「雌伏」の読みは？",           "a": "しふく",            "meaning": "じっと機会を待ちながら耐え忍ぶこと"},
+    {"q": "「捲土重来」の読みは？",       "a": "けんどちょうらい",  "meaning": "一度敗れた者が再び勢力を盛り返すこと"},
+    {"q": "「狡猾」の読みは？",           "a": "こうかつ",          "meaning": "ずる賢いさま"},
+    {"q": "「冗漫」の読みは？",           "a": "じょうまん",        "meaning": "むだに長くてだれること"},
+    {"q": "「怜悧」の読みは？",           "a": "れいり",            "meaning": "頭の働きが鋭く賢いこと"},
+    {"q": "「嶮峻」の読みは？",           "a": "けんしゅん",        "meaning": "山が険しくそびえるさま"},
+    {"q": "「懶惰」の読みは？",           "a": "らんだ",            "meaning": "なまけること"},
+    {"q": "「彷徨」の読みは？",           "a": "ほうこう",          "meaning": "あてもなくさまよい歩くこと"},
+    {"q": "「鼎談」の読みは？",           "a": "ていだん",          "meaning": "三人で向かい合って話し合うこと"},
+    {"q": "「鬱勃」の読みは？",           "a": "うつぼつ",          "meaning": "気力が盛んに湧き起こるさま"},
+    {"q": "「掣肘」の読みは？",           "a": "せいちゅう",        "meaning": "横から口出しして邪魔をすること"},
+    {"q": "「邂逅」の読みは？",           "a": "かいこう",          "meaning": "思いがけなく出会うこと"},
+    {"q": "「咆哮」の読みは？",           "a": "ほうこう",          "meaning": "猛獣などが激しく吠えること"},
+    {"q": "「慟哭」の読みは？",           "a": "どうこく",          "meaning": "声をあげて激しく泣くこと"},
+    {"q": "「懊悩」の読みは？",           "a": "おうのう",          "meaning": "思い悩み苦しむこと"},
+    {"q": "「旺盛」の読みは？",           "a": "おうせい",          "meaning": "勢いが盛んなさま"},
+    {"q": "「淳朴」の読みは？",           "a": "じゅんぼく",        "meaning": "純粋でかざり気がないこと"},
+    {"q": "「懈怠」の読みは？",           "a": "けたい",            "meaning": "怠けること"},
+    {"q": "「憐憫」の読みは？",           "a": "れんびん",          "meaning": "かわいそうに思うこと"},
+    {"q": "「嗚咽」の読みは？",           "a": "おえつ",            "meaning": "声をつまらせて泣くこと"},
+    {"q": "「翻弄」の読みは？",           "a": "ほんろう",          "meaning": "思うままにもてあそぶこと"},
+    {"q": "「錯綜」の読みは？",           "a": "さくそう",          "meaning": "いり混じって複雑になること"},
+    {"q": "「忖度」の読みは？",           "a": "そんたく",          "meaning": "他人の心を推しはかること"},
+    # ── 書き取り問題 ──
+    {"q": "「かっとう（葛藤）」を漢字で書くと？", "a": "葛藤",       "meaning": "心の中の相反する欲求の争い"},
+    {"q": "「しんし（紳士）」を漢字で書くと？",   "a": "紳士",       "meaning": "礼儀正しく品位ある男性"},
+    {"q": "「しっぺい（疾病）」を漢字で書くと？", "a": "疾病",       "meaning": "病気"},
+    {"q": "「えんかつ（円滑）」を漢字で書くと？", "a": "円滑",       "meaning": "物事がすらすらと進むさま"},
+    {"q": "「きびす（踵）」を漢字で書くと？",     "a": "踵",         "meaning": "かかと"},
+    {"q": "「こうよう（紅葉）」を漢字で書くと？", "a": "紅葉",       "meaning": "秋に葉が赤や黄に色づくこと"},
+    {"q": "「さんじゅつ（算術）」を漢字で書くと？","a": "算術",      "meaning": "計算の方法・技術"},
+    {"q": "「もうらく（耄碌）」を漢字で書くと？", "a": "耄碌",       "meaning": "年をとって頭や体が衰えること"},
+    {"q": "「かんか（陥穽）」の「陥穽」の読みは？","a": "かんせい",  "meaning": "落とし穴。計略のわな"},
+    {"q": "「とりょう（塗料）」を漢字で書くと？", "a": "塗料",       "meaning": "塗るための材料"},
+    # ── 四字熟語 ──
+    {"q": "「一期一会」の読みは？",        "a": "いちごいちえ",     "meaning": "一生に一度限りの出会いを大切にすること"},
+    {"q": "「傍若無人」の読みは？",        "a": "ぼうじゃくぶじん", "meaning": "人目を気にせず勝手に振る舞うさま"},
+    {"q": "「付和雷同」の読みは？",        "a": "ふわらいどう",     "meaning": "自分の考えがなく他人の意見に同調すること"},
+    {"q": "「暗中模索」の読みは？",        "a": "あんちゅうもさく", "meaning": "手がかりなしに試行錯誤すること"},
+    {"q": "「五里霧中」の読みは？",        "a": "ごりむちゅう",     "meaning": "方針が立たず迷っている状態"},
+    {"q": "「玉石混淆」の読みは？",        "a": "ぎょくせきこんこう","meaning": "すぐれたものと劣ったものが混じり合っていること"},
+    {"q": "「臥薪嘗胆」の読みは？",        "a": "がしんしょうたん", "meaning": "目的のために辛苦に耐え続けること"},
+    {"q": "「含蓄」の読みは？",            "a": "がんちく",         "meaning": "言葉や文章に深い意味が含まれていること"},
+    {"q": "「閑話休題」の読みは？",        "a": "かんわきゅうだい", "meaning": "それはさておき（話を本題に戻すとき）"},
+    {"q": "「切磋琢磨」の読みは？",        "a": "せっさたくま",     "meaning": "互いに励まし合って向上すること"},
+    {"q": "「狷介孤高」の読みは？",        "a": "けんかいここう",   "meaning": "頑固で世間に迎合しない高い態度"},
+    {"q": "「佳人薄命」の読みは？",        "a": "かじんはくめい",   "meaning": "美人は運命に恵まれないことが多い"},
+    {"q": "「磊落豪快」の読みは？",        "a": "らいらくごうかい", "meaning": "心が広く、こせこせしないさま"},
+    {"q": "「百花繚乱」の読みは？",        "a": "ひゃっかりょうらん","meaning": "多くの花が咲き乱れること。才能ある人が多く現れること"},
+    {"q": "「一朝一夕」の読みは？",        "a": "いっちょういっせき","meaning": "ごく短い期間"},
+    {"q": "「奇想天外」の読みは？",        "a": "きそうてんがい",   "meaning": "思いもよらない奇抜な発想"},
+    {"q": "「虚心坦懐」の読みは？",        "a": "きょしんたんかい", "meaning": "わだかまりなく、素直な心でいること"},
+    {"q": "「意気軒昂」の読みは？",        "a": "いきけんこう",     "meaning": "意気込みが高まって元気なさま"},
+    {"q": "「巧言令色」の読みは？",        "a": "こうげんれいしょく","meaning": "口先だけで飾り、誠意に欠けること"},
+    {"q": "「和光同塵」の読みは？",        "a": "わこうどうじん",   "meaning": "才能を隠して俗世間に交わること"},
+    # ── 類義語・対義語 ──
+    {"q": "「敷衍（ふえん）」の意味は？",  "a": "敷き広げて説明すること","meaning": "内容を詳しく説き明かすこと"},
+    {"q": "「忖度」の類義語は？",          "a": "推量・斟酌（しんしゃく）","meaning": "他人の気持ちを推しはかること"},
+    {"q": "「逡巡」の対義語は？",          "a": "決断・断行",        "meaning": "ためらわず行動すること"},
+    {"q": "「冗漫」の対義語は？",          "a": "簡潔・端的",        "meaning": "むだなく短くまとめてあること"},
+    {"q": "「恬淡」の類義語は？",          "a": "淡泊・超然",        "meaning": "こだわりのなく淡々としているさま"},
 ]
 
 
-def get_todays_kanji(now: datetime) -> dict:
-    day_index = now.timetuple().tm_yday
-    return KANJI_QUESTIONS[day_index % len(KANJI_QUESTIONS)]
+def get_todays_kanji(now: datetime) -> list[dict]:
+    """今日の漢字 5問を返す（日付ベースで循環）"""
+    n = len(KANJI_QUESTIONS)
+    start = (now.timetuple().tm_yday * 5) % n
+    return [KANJI_QUESTIONS[(start + i) % n] for i in range(5)]
 
 
 # ─── フィード取得 ──────────────────────────────────────────────────────────────
@@ -272,42 +350,46 @@ def build_body(items_by_source: list[tuple], content_type: str = "morning") -> s
     return html
 
 
-def build_kanji_html(kanji: dict) -> str:
-    """漢字カード — 教育ブログの「featured article」スタイルで表示"""
-    return f'''<div class="card mb-1 overflow-hidden">
-  <div class="h-20 flex items-center justify-center"
+def build_kanji_html(kanjis: list[dict]) -> str:
+    """漢字カード — 今日の5問を1枚のカードにまとめて表示"""
+    items_html = ""
+    for i, k in enumerate(kanjis, 1):
+        items_html += f'''
+    <div class="py-3 {'border-t border-slate-100' if i > 1 else ''}">
+      <p class="text-sm font-bold text-slate-800 mb-1">Q{i}. {k["q"]}</p>
+      <details>
+        <summary class="text-xs text-brand-500 font-semibold cursor-pointer select-none">答えを見る ▶</summary>
+        <div class="mt-2 bg-amber-50 rounded-lg p-3">
+          <p class="text-sm font-bold text-slate-800">→ {k["a"]}</p>
+          <p class="text-xs text-slate-500 mt-1">{k["meaning"]}</p>
+        </div>
+      </details>
+    </div>'''
+    return f'''<div class="card mb-3 overflow-hidden">
+  <div class="px-4 py-3 flex items-center gap-3"
        style="background:linear-gradient(135deg,#fef3c7,#fde68a)">
-    <span class="text-4xl">✏️</span>
-  </div>
-  <div class="p-4">
-    <div class="flex gap-2 mb-2">
-      <span class="tag bg-amber-50 text-amber-600">漢字検定 準一級</span>
-      <span class="tag bg-slate-100 text-slate-500">今日の一問</span>
+    <span class="text-2xl">✏️</span>
+    <div>
+      <span class="text-xs font-bold text-amber-800">漢字検定 準一級</span>
+      <p class="text-sm font-bold text-amber-900">今日の5問</p>
     </div>
-    <p class="text-sm font-bold text-slate-800 mb-1">{kanji["q"]}</p>
-    <details>
-      <summary class="text-sm text-brand-500 font-semibold mt-2 cursor-pointer select-none">答えを見る →</summary>
-      <div class="mt-3 pt-3 border-t border-slate-100">
-        <p class="text-base font-bold text-slate-800">読み：{kanji["a"]}</p>
-        <p class="text-xs text-slate-500 mt-1">意味：{kanji["meaning"]}</p>
-      </div>
-    </details>
+  </div>
+  <div class="px-4 pb-3">{items_html}
   </div>
 </div>
 '''
 
 
 def generate_html(content_type: str, items_by_source: list[tuple], now: datetime) -> str:
-    time_str = now.strftime("%H:%M")
-    date_str = now.strftime("%Y年%m月%d日（%a）")
+    date_str = now.strftime("%-m月%-d日（%a）")
 
     if content_type == "morning":
         heading  = "朝の記事"
-        title    = f"朝の記事 — {now.strftime('%m/%d')}"
-        tabs     = ["すべて", "漢字一問", "奈良", "教育", "吹奏楽・音楽"]
+        title    = f"朝の記事 — {now.strftime('%-m/%-d')}"
+        tabs     = ["すべて", "漢字5問", "奈良", "教育", "音楽教育"]
     else:
         heading  = "昼の記事"
-        title    = f"昼の記事 — {now.strftime('%m/%d')}"
+        title    = f"昼の記事 — {now.strftime('%-m/%-d')}"
         tabs     = ["すべて", "教育", "吹奏楽・音楽", "国語・図書"]
 
     tabs_html = "".join(
@@ -345,22 +427,15 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
 </head>
 <body class="font-sans min-h-screen" style="background:#f1f5f9">
 
-  <!-- ステータスバー -->
-  <div class="bg-white px-6 pt-3 pb-2 flex justify-between items-center">
-    <span class="text-xs font-semibold text-slate-700">{time_str}</span>
-    <span class="text-xs text-slate-400">{date_str}</span>
-    <div class="flex gap-1 items-center text-slate-500">
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33C16.4 22 17 21.4 17 20.67V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
-    </div>
-  </div>
-
-  <!-- メインコンテンツ (画面03 記事一覧 と同レイアウト) -->
-  <div class="px-5 pt-3 pb-24">
+  <!-- メインコンテンツ -->
+  <div class="px-5 pt-5 pb-24">
 
     <!-- タイトル行 -->
     <div class="flex justify-between items-center mb-4">
-      <h1 class="text-lg font-bold text-slate-800">{heading}</h1>
+      <div>
+        <h1 class="text-lg font-bold text-slate-800">{heading}</h1>
+        <p class="text-xs text-slate-400">{date_str}</p>
+      </div>
       <div class="flex gap-2 items-center">
         <a href="archive.html"
            class="text-xs font-semibold text-slate-400 px-3 py-1.5 bg-slate-100 rounded-full no-underline">
@@ -442,11 +517,11 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
           li.style.display =
             (cat === 'すべて' || card.dataset.category === cat) ? '' : 'none';
         }});
-        /* 漢字カードは「すべて」「漢字一問」タブのみ表示 */
+        /* 漢字カードは「すべて」「漢字5問」タブのみ表示 */
         const kanjiWrap = document.getElementById('kanji-wrap');
         if (kanjiWrap) {{
           kanjiWrap.style.display =
-            (cat === 'すべて' || cat === '漢字一問') ? '' : 'none';
+            (cat === 'すべて' || cat === '漢字5問') ? '' : 'none';
         }}
       }});
     }});
