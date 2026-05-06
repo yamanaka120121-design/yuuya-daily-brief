@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 yuuya-daily-brief — メイン生成スクリプト
-RSS取得 → HTML生成（漢字一問付き）→ LINE送信
+RSS取得 → (OpenAI 要約) → HTML生成（漢字一問付き）→ LINE送信
 """
 
 import argparse
@@ -16,15 +16,18 @@ import requests
 JST = timezone(timedelta(hours=9))
 
 # ─── RSS フィード定義 ──────────────────────────────────────────────────────────
+# (表示名, URL, 取得件数)  ← SOURCE_META のキーが表示名に含まれていること
 
 MORNING_FEEDS = [
-    ("社会のニュース（NHK）",  "https://www3.nhk.or.jp/rss/news/cat1.xml", 3),
-    ("文化・エンタメ（NHK）",  "https://www3.nhk.or.jp/rss/news/cat6.xml", 3),
+    ("社会のニュース（NHK）",  "https://www3.nhk.or.jp/rss/news/cat1.xml",   2),
+    ("奈良のニュース（NHK）",  "https://www3.nhk.or.jp/lnews/nara/rss.xml",  2),
+    ("教育ニュース",           "https://www.kyobun.co.jp/feed/",             2),
 ]
 
 NOON_FEEDS = [
-    ("科学・医療（NHK）",      "https://www3.nhk.or.jp/rss/news/cat5.xml", 3),
-    ("文化・エンタメ（NHK）",  "https://www3.nhk.or.jp/rss/news/cat6.xml", 3),
+    ("科学・医療（NHK）",      "https://www3.nhk.or.jp/rss/news/cat5.xml",   2),
+    ("文化・エンタメ（NHK）",  "https://www3.nhk.or.jp/rss/news/cat6.xml",   2),
+    ("教育ニュース",           "https://www.kyobun.co.jp/feed/",             2),
 ]
 
 # ─── 漢字検定準一級 日替わり一問 ──────────────────────────────────────────────
@@ -89,28 +92,76 @@ def fetch_feed(url: str, max_items: int) -> list[dict]:
         return []
 
 
+# ─── OpenAI 要約 ──────────────────────────────────────────────────────────────
+
+def ai_rewrite(title: str, summary: str, content_type: str) -> str:
+    """
+    OpenAI gpt-4o-mini で教員向けのひとこと要約を生成する。
+    OPENAI_API_KEY が未設定の場合は元の summary をそのまま返す。
+    """
+    key = os.environ.get("OPENAI_API_KEY", "")
+    if not key or not summary:
+        return summary
+
+    if content_type == "morning":
+        instruction = (
+            "高校の国語・吹奏楽担当教師が朝のホームルームで生徒に語りかける"
+            "ための一言コメントを40〜60字の日本語で作成してください。"
+            "「〇〇先生ならこう語る」という自然な口語調で。"
+        )
+    else:
+        instruction = (
+            "高校の国語・吹奏楽担当教師が午後の授業や部活指導に活かすための"
+            "実践ヒントを40〜60字の日本語で作成してください。"
+            "具体的なアクションが含まれると良い。"
+        )
+
+    prompt = f"{instruction}\n\nニュース: {title}\n{summary}"
+    try:
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            json={
+                "model": "gpt-4o-mini",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 120,
+                "temperature": 0.7,
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        print(f"  [OpenAI警告] {e}")
+        return summary
+
+
 # ─── HTML 生成 ────────────────────────────────────────────────────────────────
 
 SOURCE_META = {
     "社会": {
-        "label": "社会のニュース",
-        "tab":   "社会ニュース",
-        "icon":  "🏛️",
-        "icon_bg": "bg-blue-50",
+        "label": "社会のニュース", "tab": "社会ニュース",
+        "icon": "🏛️", "icon_bg": "bg-blue-50",
         "tag_cls": "bg-blue-50 text-blue-600",
     },
+    "奈良": {
+        "label": "奈良のニュース", "tab": "奈良",
+        "icon": "🦌", "icon_bg": "bg-emerald-50",
+        "tag_cls": "bg-emerald-50 text-emerald-600",
+    },
+    "教育": {
+        "label": "教育ニュース", "tab": "教育",
+        "icon": "📚", "icon_bg": "bg-violet-50",
+        "tag_cls": "bg-violet-50 text-violet-600",
+    },
     "文化": {
-        "label": "文化・エンタメ",
-        "tab":   "文化・エンタメ",
-        "icon":  "🎭",
-        "icon_bg": "bg-amber-50",
+        "label": "文化・エンタメ", "tab": "文化・エンタメ",
+        "icon": "🎭", "icon_bg": "bg-amber-50",
         "tag_cls": "bg-amber-50 text-amber-600",
     },
     "科学": {
-        "label": "科学・医療",
-        "tab":   "科学・医療",
-        "icon":  "🔬",
-        "icon_bg": "bg-green-50",
+        "label": "科学・医療", "tab": "科学・医療",
+        "icon": "🔬", "icon_bg": "bg-green-50",
         "tag_cls": "bg-green-50 text-green-600",
     },
 }
@@ -127,22 +178,29 @@ def _meta(source_name: str) -> dict:
 
 
 def _read_time(title: str, summary: str) -> str:
-    chars = len(title) + len(summary)
-    mins  = max(1, round(chars / 400))
+    mins = max(1, round((len(title) + len(summary)) / 400))
     return f"📖 {mins}分"
 
 
-def build_body(items_by_source: list[tuple]) -> str:
-    """記事一覧 (教育ブログ 画面03) と同じカードレイアウトで生成する"""
+def build_body(items_by_source: list[tuple], content_type: str = "morning") -> str:
+    """記事一覧（教育ブログ 画面03）と同じカードレイアウトで生成する"""
     html = '<ul class="space-y-3">\n'
     for source_name, items in items_by_source:
         if not items:
             continue
         m = _meta(source_name)
         for item in items:
-            read_t = _read_time(item["title"], item["summary"])
+            read_t  = _read_time(item["title"], item["summary"])
+            comment = ai_rewrite(item["title"], item["summary"], content_type)
+            ai_html = ""
+            if comment and comment != item["summary"]:
+                ai_html = (
+                    f'<p class="text-xs text-brand-500 mt-1 leading-relaxed">'
+                    f'💡 {comment}</p>'
+                )
             html += f'''<li><a href="{item["link"]}" target="_blank" rel="noopener"
-  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block"
+  data-category="{m["tab"]}">
   <div class="w-16 h-16 rounded-xl {m["icon_bg"]} flex-shrink-0 flex items-center justify-center text-2xl">{m["icon"]}</div>
   <div class="flex-1">
     <div class="flex gap-1 mb-1">
@@ -150,7 +208,7 @@ def build_body(items_by_source: list[tuple]) -> str:
       <span class="tag bg-slate-100 text-slate-500">{read_t}</span>
     </div>
     <p class="text-sm font-semibold text-slate-700 leading-snug">{item["title"]}</p>
-    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
+    {ai_html}
   </div>
 </a></li>
 '''
@@ -188,22 +246,23 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
     date_str = now.strftime("%Y年%m月%d日（%a）")
 
     if content_type == "morning":
-        heading   = "朝の記事"
-        title     = f"朝の記事 — {now.strftime('%m/%d')}"
-        label_bg  = "#2d6a4f"
-        tabs      = ["すべて", "漢字一問", "社会ニュース", "文化・エンタメ"]
+        heading  = "朝の記事"
+        title    = f"朝の記事 — {now.strftime('%m/%d')}"
+        tabs     = ["すべて", "漢字一問", "社会ニュース", "奈良", "教育"]
     else:
-        heading   = "昼の記事"
-        title     = f"昼の記事 — {now.strftime('%m/%d')}"
-        label_bg  = "#0ea5e9"
-        tabs      = ["すべて", "科学・医療", "文化・エンタメ"]
+        heading  = "昼の記事"
+        title    = f"昼の記事 — {now.strftime('%m/%d')}"
+        tabs     = ["すべて", "科学・医療", "文化・エンタメ", "教育"]
 
     tabs_html = "".join(
-        f'<button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full {"bg-brand-500 text-white" if i == 0 else "bg-slate-100 text-slate-500"}">{t}</button>'
+        f'<button type="button" data-cat="{t}" '
+        f'class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full '
+        f'{"bg-brand-500 text-white" if i == 0 else "bg-slate-100 text-slate-500"}">'
+        f'{t}</button>'
         for i, t in enumerate(tabs)
     )
 
-    article_body = build_body(items_by_source)
+    article_body = build_body(items_by_source, content_type)
     if not article_body or article_body == '<ul class="space-y-3">\n</ul>\n':
         article_body = '<div class="card p-4"><p class="text-sm text-slate-500">現在取得できるニュースがありません。</p></div>'
 
@@ -260,7 +319,7 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
     </div>
 
     <!-- 漢字カード (朝のみ) -->
-    {kanji_block}
+    <div id="kanji-wrap">{kanji_block}</div>
 
     <!-- 記事リスト -->
     {article_body}
@@ -295,6 +354,34 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
   <div class="fixed bottom-0 left-0 right-0 h-1 flex items-end justify-center pb-1 pointer-events-none">
     <div class="w-32 h-1 bg-slate-300 rounded-full"></div>
   </div>
+
+  <script>
+    /* ── フィルタータブ ── */
+    document.querySelectorAll('.tab-btn').forEach(btn => {{
+      btn.addEventListener('click', () => {{
+        const cat = btn.dataset.cat;
+        /* タブの見た目を切り替える */
+        document.querySelectorAll('.tab-btn').forEach(b => {{
+          b.classList.remove('bg-brand-500', 'text-white');
+          b.classList.add('bg-slate-100', 'text-slate-500');
+        }});
+        btn.classList.remove('bg-slate-100', 'text-slate-500');
+        btn.classList.add('bg-brand-500', 'text-white');
+        /* カードを絞り込む */
+        document.querySelectorAll('[data-category]').forEach(card => {{
+          const li = card.closest('li') || card;
+          li.style.display =
+            (cat === 'すべて' || card.dataset.category === cat) ? '' : 'none';
+        }});
+        /* 漢字カードは「すべて」「漢字一問」タブのみ表示 */
+        const kanjiWrap = document.getElementById('kanji-wrap');
+        if (kanjiWrap) {{
+          kanjiWrap.style.display =
+            (cat === 'すべて' || cat === '漢字一問') ? '' : 'none';
+        }}
+      }});
+    }});
+  </script>
 
 </body>
 </html>"""
