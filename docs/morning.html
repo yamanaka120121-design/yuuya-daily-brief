@@ -8,135 +8,176 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          brand: {
-            50: '#f0f7ff', 100: '#dbeeff', 200: '#b6dcfe',
-            300: '#75c0fc', 400: '#3aa2f8', 500: '#1183e9',
-            600: '#0566c7', 700: '#0552a1'
-          }
-        },
-        fontFamily: { sans: ['"Noto Sans JP"', 'sans-serif'] }
-      }
-    }
-  }
-</script>
+<script>tailwind.config={theme:{extend:{colors:{brand:{50:'#f0f7ff',100:'#dbeeff',200:'#b6dcfe',300:'#75c0fc',400:'#3aa2f8',500:'#1183e9',600:'#0566c7',700:'#0552a1'}},fontFamily:{sans:['"Noto Sans JP"','sans-serif']}}}}</script>
 <style>
-  body { background: #f1f5f9; }
-  .card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-  .section-label {
-    display: inline-block; font-size: 11px; font-weight: 700;
-    padding: 3px 10px; border-radius: 99px; letter-spacing: .04em;
-    background: #2d6a4f; color: white;
-  }
-  .section-label.kanji { background: #b45309; }
-  .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; display: inline-block; }
-  details summary { list-style: none; }
-  details summary::-webkit-details-marker { display: none; }
+  body{background:#f1f5f9}
+  .card{background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;display:inline-block}
+  details summary{list-style:none}
+  details summary::-webkit-details-marker{display:none}
 </style>
 </head>
-<body class="font-sans min-h-screen pb-12">
+<body class="font-sans min-h-screen" style="background:#f1f5f9">
 
-  <!-- ヘッダー -->
-  <div style="background:#2d6a4f" class="px-5 pt-10 pb-5">
-    <p class="text-white text-xs font-medium opacity-75 mb-1">2026年05月06日（Wed） 18:42 JST</p>
-    <h1 class="text-white text-xl font-bold">朝の記事</h1>
-  </div>
-
-  <!-- コンテンツ -->
-  <div class="max-w-xl mx-auto px-4 pt-5 space-y-1">
-    
-<div class="flex items-center gap-2 mt-5 mb-2">
-  <span class="section-label kanji">✏️ 漢字検定 準一級 — 今日の一問</span>
-</div>
-<div class="card p-4 border-l-4 border-amber-400 mb-2">
-  <p class="text-sm font-bold text-slate-800">「蒙昧」の読みは？</p>
-  <details class="mt-3">
-    <summary class="text-xs font-semibold text-amber-600 cursor-pointer select-none">
-      ▶ 答えを見る
-    </summary>
-    <div class="mt-3 pt-3 border-t border-slate-100">
-      <p class="text-base font-bold text-slate-800">読み：もうまい</p>
-      <p class="text-xs text-slate-500 mt-1">意味：道理に暗く、無知なさま</p>
+  <!-- ステータスバー -->
+  <div class="bg-white px-6 pt-3 pb-2 flex justify-between items-center">
+    <span class="text-xs font-semibold text-slate-700">18:47</span>
+    <span class="text-xs text-slate-400">2026年05月06日（Wed）</span>
+    <div class="flex gap-1 items-center text-slate-500">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33C16.4 22 17 21.4 17 20.67V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
     </div>
-  </details>
+  </div>
+
+  <!-- メインコンテンツ (画面03 記事一覧 と同レイアウト) -->
+  <div class="px-5 pt-3 pb-24">
+
+    <!-- タイトル行 -->
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-lg font-bold text-slate-800">朝の記事</h1>
+      <button type="button" aria-label="ホームへ" onclick="history.back()"
+              class="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center">
+        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- フィルタータブ -->
+    <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
+      <button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-brand-500 text-white">すべて</button><button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">漢字一問</button><button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">社会ニュース</button><button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">文化・エンタメ</button>
+    </div>
+
+    <!-- 漢字カード (朝のみ) -->
+    <div class="card mb-1 overflow-hidden">
+  <div class="h-20 flex items-center justify-center"
+       style="background:linear-gradient(135deg,#fef3c7,#fde68a)">
+    <span class="text-4xl">✏️</span>
+  </div>
+  <div class="p-4">
+    <div class="flex gap-2 mb-2">
+      <span class="tag bg-amber-50 text-amber-600">漢字検定 準一級</span>
+      <span class="tag bg-slate-100 text-slate-500">今日の一問</span>
+    </div>
+    <p class="text-sm font-bold text-slate-800 mb-1">「蒙昧」の読みは？</p>
+    <details>
+      <summary class="text-sm text-brand-500 font-semibold mt-2 cursor-pointer select-none">答えを見る →</summary>
+      <div class="mt-3 pt-3 border-t border-slate-100">
+        <p class="text-base font-bold text-slate-800">読み：もうまい</p>
+        <p class="text-xs text-slate-500 mt-1">意味：道理に暗く、無知なさま</p>
+      </div>
+    </details>
+  </div>
 </div>
 
-<div class="flex items-center gap-2 mt-5 mb-2">
-  <span class="section-label">🏛️ 社会のニュース</span>
-</div>
 
-<a href="http://www3.nhk.or.jp/news/html/20260506/k10015115401000.html" target="_blank" rel="noopener"
-   class="card p-4 flex gap-3 items-start border-l-4 border-blue-400 block no-underline mb-2">
+    <!-- 記事リスト -->
+    <ul class="space-y-3">
+<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115401000.html" target="_blank" rel="noopener"
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  <div class="w-16 h-16 rounded-xl bg-blue-50 flex-shrink-0 flex items-center justify-center text-2xl">🏛️</div>
   <div class="flex-1">
-    <span class="tag bg-blue-50 text-blue-600 mb-1">📖 記事</span>
-    <p class="text-sm font-semibold text-slate-800 leading-snug">川崎市の路上で女性死亡 ひき逃げ事件か</p>
-    <p class="text-xs text-slate-400 leading-relaxed mt-1">川崎市の市道脇の側道で女性が頭から血を流して倒れているのが見つかりその後、死亡しました。警察は現場の状況からひき逃げ事件とみて捜査しています。</p>
-    <p class="text-xs font-semibold text-brand-500 mt-2">続きを読む →</p>
+    <div class="flex gap-1 mb-1">
+      <span class="tag bg-blue-50 text-blue-600">社会のニュース</span>
+      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
+    </div>
+    <p class="text-sm font-semibold text-slate-700 leading-snug">川崎市の路上で女性死亡 ひき逃げ事件か</p>
+    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
   </div>
-</a>
-
-<a href="http://www3.nhk.or.jp/news/html/20260506/k10015115361000.html" target="_blank" rel="noopener"
-   class="card p-4 flex gap-3 items-start border-l-4 border-blue-400 block no-underline mb-2">
+</a></li>
+<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115361000.html" target="_blank" rel="noopener"
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  <div class="w-16 h-16 rounded-xl bg-blue-50 flex-shrink-0 flex items-center justify-center text-2xl">🏛️</div>
   <div class="flex-1">
-    <span class="tag bg-blue-50 text-blue-600 mb-1">📖 記事</span>
-    <p class="text-sm font-semibold text-slate-800 leading-snug">京都 南丹 小学生男児の遺体遺棄事件 父親を殺人容疑で再逮捕</p>
-    <p class="text-xs text-slate-400 leading-relaxed mt-1">京都府南丹市で小学生の男子児童が遺体で見つかった事件で、警察は37歳の父親が、市内の公衆トイレで首を絞めて児童を殺害したとして殺人の疑いで再逮捕しました。</p>
-    <p class="text-xs font-semibold text-brand-500 mt-2">続きを読む →</p>
+    <div class="flex gap-1 mb-1">
+      <span class="tag bg-blue-50 text-blue-600">社会のニュース</span>
+      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
+    </div>
+    <p class="text-sm font-semibold text-slate-700 leading-snug">京都 南丹 小学生男児の遺体遺棄事件 父親を殺人容疑で再逮捕</p>
+    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
   </div>
-</a>
-
-<a href="http://www3.nhk.or.jp/news/html/20260506/k10015115371000.html" target="_blank" rel="noopener"
-   class="card p-4 flex gap-3 items-start border-l-4 border-blue-400 block no-underline mb-2">
+</a></li>
+<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115371000.html" target="_blank" rel="noopener"
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  <div class="w-16 h-16 rounded-xl bg-blue-50 flex-shrink-0 flex items-center justify-center text-2xl">🏛️</div>
   <div class="flex-1">
-    <span class="tag bg-blue-50 text-blue-600 mb-1">📖 記事</span>
-    <p class="text-sm font-semibold text-slate-800 leading-snug">台風5号 日本のはるか南で発生 日本に接近しない見込み</p>
-    <p class="text-xs text-slate-400 leading-relaxed mt-1">6日午後、日本のはるか南の海上で台風5号が発生しました。日本には接近しない見込みで、気象庁は付近を通る船舶に注意を呼びかけています。</p>
-    <p class="text-xs font-semibold text-brand-500 mt-2">続きを読む →</p>
+    <div class="flex gap-1 mb-1">
+      <span class="tag bg-blue-50 text-blue-600">社会のニュース</span>
+      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
+    </div>
+    <p class="text-sm font-semibold text-slate-700 leading-snug">台風5号 日本のはるか南で発生 日本に接近しない見込み</p>
+    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
   </div>
-</a>
-
-<div class="flex items-center gap-2 mt-5 mb-2">
-  <span class="section-label">🎭 文化・エンタメ</span>
-</div>
-
-<a href="http://www3.nhk.or.jp/news/html/20260506/k10015115381000.html" target="_blank" rel="noopener"
-   class="card p-4 flex gap-3 items-start border-l-4 border-amber-300 block no-underline mb-2">
+</a></li>
+<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115381000.html" target="_blank" rel="noopener"
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  <div class="w-16 h-16 rounded-xl bg-amber-50 flex-shrink-0 flex items-center justify-center text-2xl">🎭</div>
   <div class="flex-1">
-    <span class="tag bg-amber-50 text-amber-600 mb-1">📖 記事</span>
-    <p class="text-sm font-semibold text-slate-800 leading-snug">中国の大型連休 本土から香港に訪問100万人超 マナー違反も</p>
-    <p class="text-xs text-slate-400 leading-relaxed mt-1">中国の大型連休の期間中、香港には中国本土から100万人以上が訪れましたが、観光地ではゴミの放置などのマナー違反が後を絶たず、対策の強化を求める声が出ています。</p>
-    <p class="text-xs font-semibold text-brand-500 mt-2">続きを読む →</p>
+    <div class="flex gap-1 mb-1">
+      <span class="tag bg-amber-50 text-amber-600">文化・エンタメ</span>
+      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
+    </div>
+    <p class="text-sm font-semibold text-slate-700 leading-snug">中国の大型連休 本土から香港に訪問100万人超 マナー違反も</p>
+    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
   </div>
-</a>
-
-<a href="http://www3.nhk.or.jp/news/html/20260506/k10015115241000.html" target="_blank" rel="noopener"
-   class="card p-4 flex gap-3 items-start border-l-4 border-amber-300 block no-underline mb-2">
+</a></li>
+<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115241000.html" target="_blank" rel="noopener"
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  <div class="w-16 h-16 rounded-xl bg-amber-50 flex-shrink-0 flex items-center justify-center text-2xl">🎭</div>
   <div class="flex-1">
-    <span class="tag bg-amber-50 text-amber-600 mb-1">📖 記事</span>
-    <p class="text-sm font-semibold text-slate-800 leading-snug">ハンタウイルス集団感染疑いの船 カナリア諸島で受け入れへ</p>
-    <p class="text-xs text-slate-400 leading-relaxed mt-1">…</p>
-    <p class="text-xs font-semibold text-brand-500 mt-2">続きを読む →</p>
+    <div class="flex gap-1 mb-1">
+      <span class="tag bg-amber-50 text-amber-600">文化・エンタメ</span>
+      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
+    </div>
+    <p class="text-sm font-semibold text-slate-700 leading-snug">ハンタウイルス集団感染疑いの船 カナリア諸島で受け入れへ</p>
+    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
   </div>
-</a>
-
-<a href="http://www3.nhk.or.jp/news/html/20260506/k10015101791000.html" target="_blank" rel="noopener"
-   class="card p-4 flex gap-3 items-start border-l-4 border-amber-300 block no-underline mb-2">
+</a></li>
+<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015101791000.html" target="_blank" rel="noopener"
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  <div class="w-16 h-16 rounded-xl bg-amber-50 flex-shrink-0 flex items-center justify-center text-2xl">🎭</div>
   <div class="flex-1">
-    <span class="tag bg-amber-50 text-amber-600 mb-1">📖 記事</span>
-    <p class="text-sm font-semibold text-slate-800 leading-snug">【随時更新】ロシア ウクライナに軍事侵攻（5月6日の動き）</p>
-    <p class="text-xs text-slate-400 leading-relaxed mt-1">…</p>
-    <p class="text-xs font-semibold text-brand-500 mt-2">続きを読む →</p>
+    <div class="flex gap-1 mb-1">
+      <span class="tag bg-amber-50 text-amber-600">文化・エンタメ</span>
+      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
+    </div>
+    <p class="text-sm font-semibold text-slate-700 leading-snug">【随時更新】ロシア ウクライナに軍事侵攻（5月6日の動き）</p>
+    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
   </div>
-</a>
+</a></li>
+</ul>
+
 
   </div>
 
-  <!-- フッター -->
-  <p class="text-center text-xs text-slate-300 mt-10">山中優弥 専用 · yuuya-daily</p>
+  <!-- ボトムナビ (教育ブログと同じ構造) -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100
+              flex justify-around px-2 py-2 pb-4">
+    <a href="index.html"
+       class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-slate-400 no-underline">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="text-xs">ホーム</span>
+    </a>
+    <a href="morning.html"
+       class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center no-underline text-brand-500">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z"/>
+      </svg>
+      <span class="text-xs font-semibold">朝</span>
+    </a>
+    <a href="noon.html"
+       class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center no-underline text-slate-400">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <span class="text-xs ">昼</span>
+    </a>
+  </nav>
+
+  <!-- ホームインジケーター -->
+  <div class="fixed bottom-0 left-0 right-0 h-1 flex items-end justify-center pb-1 pointer-events-none">
+    <div class="w-32 h-1 bg-slate-300 rounded-full"></div>
+  </div>
 
 </body>
 </html>
