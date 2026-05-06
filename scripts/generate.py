@@ -5,10 +5,12 @@ RSS取得 → (OpenAI 要約) → HTML生成（漢字一問付き）→ LINE送�
 """
 
 import argparse
+import json
 import os
 import re
 import textwrap
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 
 import feedparser
 import requests
@@ -359,12 +361,18 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
     <!-- タイトル行 -->
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-lg font-bold text-slate-800">{heading}</h1>
-      <button type="button" aria-label="ホームへ" onclick="history.back()"
-              class="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center">
-        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-        </svg>
-      </button>
+      <div class="flex gap-2 items-center">
+        <a href="archive.html"
+           class="text-xs font-semibold text-slate-400 px-3 py-1.5 bg-slate-100 rounded-full no-underline">
+          履歴
+        </a>
+        <button type="button" aria-label="ホームへ" onclick="location.href='index.html'"
+                class="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center">
+          <svg class="w-4 h-4 text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- フィルタータブ -->
@@ -448,6 +456,47 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
 </html>"""
 
 
+# ─── アーカイブ管理 ────────────────────────────────────────────────────────────
+
+def save_archive(content_type: str, html: str, now: datetime) -> str:
+    """
+    日付付きHTMLファイルを保存し archive.json を更新する。
+    戻り値: 保存したファイル名（例: morning-20260506.html）
+    """
+    date_key   = now.strftime("%Y%m%d")
+    date_label = now.strftime("%-m月%-d日")
+    day_jp     = ["月","火","水","木","金","土","日"][now.weekday()]
+    filename   = f"{content_type}-{date_key}.html"
+    filepath   = f"docs/{filename}"
+
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"アーカイブ保存: {filepath}")
+
+    archive_path = Path("docs/archive.json")
+    archive: list[dict] = []
+    if archive_path.exists():
+        try:
+            archive = json.loads(archive_path.read_text(encoding="utf-8"))
+        except Exception:
+            archive = []
+
+    iso_date = now.strftime("%Y-%m-%d")
+    entry = next((e for e in archive if e.get("date") == iso_date), None)
+    if entry is None:
+        entry = {"date": iso_date, "label": f"{date_label}（{day_jp}）"}
+        archive.insert(0, entry)
+
+    entry[content_type] = filename
+    archive.sort(key=lambda e: e["date"], reverse=True)
+    archive_path.write_text(
+        json.dumps(archive[:90], ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    print(f"archive.json 更新: {iso_date} / {content_type}")
+    return filename
+
+
 # ─── LINE 送信 ────────────────────────────────────────────────────────────────
 
 def send_line(token: str, user_id: str, message: str) -> None:
@@ -487,19 +536,27 @@ def main() -> None:
     html     = generate_html(content_type, items_by_source, now)
     out_path = f"docs/{content_type}.html"
     os.makedirs("docs", exist_ok=True)
+
+    # 最新版（morning.html / noon.html）を上書き保存
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(html)
     print(f"HTML 保存: {out_path}")
+
+    # 日付付きアーカイブを保存 + archive.json 更新
+    save_archive(content_type, html, now)
 
     token   = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
     user_id = os.environ["LINE_USER_ID"]
     label   = "朝" if content_type == "morning" else "昼"
     date_label = now.strftime("%-m/%-d")
-    url = (
-        "https://yamanaka120121-design.github.io"
-        f"/yuuya-daily-brief/{content_type}.html"
+    base_url = "https://yamanaka120121-design.github.io/yuuya-daily-brief"
+    today_url   = f"{base_url}/{content_type}.html"
+    archive_url = f"{base_url}/archive.html"
+    message = (
+        f"【{date_label} {label}の記事】\n"
+        f"{today_url}\n\n"
+        f"📚 過去の記事\n{archive_url}"
     )
-    message = f"【{date_label} {label}の記事】\n{url}"
     send_line(token, user_id, message)
 
 
