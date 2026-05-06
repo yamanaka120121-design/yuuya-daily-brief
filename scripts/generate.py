@@ -18,16 +18,20 @@ JST = timezone(timedelta(hours=9))
 # ─── RSS フィード定義 ──────────────────────────────────────────────────────────
 # (表示名, URL, 取得件数)  ← SOURCE_META のキーが表示名に含まれていること
 
+_GN = "https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q="
+
 MORNING_FEEDS = [
-    ("社会のニュース（NHK）",  "https://www3.nhk.or.jp/rss/news/cat1.xml",   2),
-    ("奈良のニュース（NHK）",  "https://www3.nhk.or.jp/lnews/nara/rss.xml",  2),
-    ("教育ニュース",           "https://www.kyobun.co.jp/feed/",             2),
+    # 朝のホームルームで語れるトピック
+    ("社会のニュース（NHK）",  "https://www3.nhk.or.jp/rss/news/cat1.xml",                     2),
+    ("奈良のニュース",         _GN + "%E5%A5%88%E8%89%AF+%E3%83%8B%E3%83%A5%E3%83%BC%E3%82%B9", 2),
+    ("国際ニュース（NHK）",    "https://www3.nhk.or.jp/rss/news/cat2.xml",                     2),
 ]
 
 NOON_FEEDS = [
-    ("科学・医療（NHK）",      "https://www3.nhk.or.jp/rss/news/cat5.xml",   2),
-    ("文化・エンタメ（NHK）",  "https://www3.nhk.or.jp/rss/news/cat6.xml",   2),
-    ("教育ニュース",           "https://www.kyobun.co.jp/feed/",             2),
+    # 授業づくり・部活指導に活かすトピック
+    ("教育ニュース",           _GN + "%E9%AB%98%E6%A0%A1+%E6%95%99%E8%82%B2+%E6%8C%87%E5%B0%8E", 2),
+    ("吹奏楽・音楽",           _GN + "%E5%90%B9%E5%A5%8F%E6%A5%BD",                             2),
+    ("国語・図書",             _GN + "%E5%9B%BD%E8%AA%9E+%E6%95%99%E8%82%B2+%E8%AA%AD%E6%9B%B8", 2),
 ]
 
 # ─── 漢字検定準一級 日替わり一問 ──────────────────────────────────────────────
@@ -94,29 +98,22 @@ def fetch_feed(url: str, max_items: int) -> list[dict]:
 
 # ─── Claude (Anthropic) 要約 ───────────────────────────────────────────────────
 
-def ai_rewrite(title: str, summary: str, content_type: str) -> str:
+def ai_rewrite(title: str, summary: str, ai_hint: str) -> str:
     """
-    Anthropic claude-haiku-3-5 で教員向けのひとこと要約を生成する。
+    Anthropic claude-haiku-4-5 でカテゴリ別・教員向けのひとこと要約を生成する。
     ANTHROPIC_API_KEY が未設定の場合は元の summary をそのまま返す。
     """
     key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not key or not summary:
         return summary
 
-    if content_type == "morning":
-        instruction = (
-            "高校の国語・吹奏楽担当教師が朝のホームルームで生徒に語りかける"
-            "ための一言コメントを40〜60字の日本語で作成してください。"
-            "「先生ならこう語る」という自然な口語調で、説教くさくなく。"
-        )
-    else:
-        instruction = (
-            "高校の国語・吹奏楽担当教師が午後の授業や部活指導に活かすための"
-            "実践ヒントを40〜60字の日本語で作成してください。"
-            "具体的なアクションが含まれると良い。"
-        )
-
-    prompt = f"{instruction}\n\nニュース: {title}\n{summary}"
+    prompt = (
+        f"あなたは奈良県の高校で国語と吹奏楽部を担当する教師・山中優弥先生です。\n"
+        f"以下のニュースについて、{ai_hint}を作成してください。\n"
+        f"出力はコメント本文のみ（見出しや前置き不要）。\n\n"
+        f"ニュースタイトル: {title}\n"
+        f"概要: {summary}"
+    )
     try:
         resp = requests.post(
             "https://api.anthropic.com/v1/messages",
@@ -146,26 +143,49 @@ SOURCE_META = {
         "label": "社会のニュース", "tab": "社会ニュース",
         "icon": "🏛️", "icon_bg": "bg-blue-50",
         "tag_cls": "bg-blue-50 text-blue-600",
+        "ai_hint": "朝のホームルームで生徒に語りかける一言（口語調・50字以内）",
     },
     "奈良": {
         "label": "奈良のニュース", "tab": "奈良",
         "icon": "🦌", "icon_bg": "bg-emerald-50",
         "tag_cls": "bg-emerald-50 text-emerald-600",
+        "ai_hint": "地元・奈良の話題として朝礼で紹介できる一言（口語調・50字以内）",
+    },
+    "国際": {
+        "label": "国際ニュース", "tab": "国際",
+        "icon": "🌏", "icon_bg": "bg-sky-50",
+        "tag_cls": "bg-sky-50 text-sky-600",
+        "ai_hint": "高校生に世界の動きを伝える朝礼トーク一言（口語調・50字以内）",
     },
     "教育": {
         "label": "教育ニュース", "tab": "教育",
         "icon": "📚", "icon_bg": "bg-violet-50",
         "tag_cls": "bg-violet-50 text-violet-600",
+        "ai_hint": "高校教師が授業改善・学級経営に活かすヒント（具体的アクション・50字以内）",
+    },
+    "吹奏楽": {
+        "label": "吹奏楽・音楽", "tab": "吹奏楽・音楽",
+        "icon": "🎺", "icon_bg": "bg-rose-50",
+        "tag_cls": "bg-rose-50 text-rose-600",
+        "ai_hint": "吹奏楽部顧問として部活指導や演奏技術向上に活かすヒント（50字以内）",
+    },
+    "国語": {
+        "label": "国語・図書", "tab": "国語・図書",
+        "icon": "📖", "icon_bg": "bg-amber-50",
+        "tag_cls": "bg-amber-50 text-amber-600",
+        "ai_hint": "高校国語の授業づくりや図書委員会活動に活かすヒント（50字以内）",
     },
     "文化": {
         "label": "文化・エンタメ", "tab": "文化・エンタメ",
-        "icon": "🎭", "icon_bg": "bg-amber-50",
-        "tag_cls": "bg-amber-50 text-amber-600",
+        "icon": "🎭", "icon_bg": "bg-orange-50",
+        "tag_cls": "bg-orange-50 text-orange-600",
+        "ai_hint": "朝礼や雑談で使える文化・エンタメの話題として一言（口語調・50字以内）",
     },
     "科学": {
         "label": "科学・医療", "tab": "科学・医療",
         "icon": "🔬", "icon_bg": "bg-green-50",
         "tag_cls": "bg-green-50 text-green-600",
+        "ai_hint": "理科横断・探究学習のヒントとして授業に活かす一言（50字以内）",
     },
 }
 
@@ -194,7 +214,7 @@ def build_body(items_by_source: list[tuple], content_type: str = "morning") -> s
         m = _meta(source_name)
         for item in items:
             read_t  = _read_time(item["title"], item["summary"])
-            comment = ai_rewrite(item["title"], item["summary"], content_type)
+            comment = ai_rewrite(item["title"], item["summary"], m.get("ai_hint", ""))
             ai_html = ""
             if comment and comment != item["summary"]:
                 ai_html = (
@@ -251,11 +271,11 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
     if content_type == "morning":
         heading  = "朝の記事"
         title    = f"朝の記事 — {now.strftime('%m/%d')}"
-        tabs     = ["すべて", "漢字一問", "社会ニュース", "奈良", "教育"]
+        tabs     = ["すべて", "漢字一問", "社会ニュース", "奈良", "国際"]
     else:
         heading  = "昼の記事"
         title    = f"昼の記事 — {now.strftime('%m/%d')}"
-        tabs     = ["すべて", "科学・医療", "文化・エンタメ", "教育"]
+        tabs     = ["すべて", "教育", "吹奏楽・音楽", "国語・図書"]
 
     tabs_html = "".join(
         f'<button type="button" data-cat="{t}" '
