@@ -92,14 +92,14 @@ def fetch_feed(url: str, max_items: int) -> list[dict]:
         return []
 
 
-# ─── OpenAI 要約 ──────────────────────────────────────────────────────────────
+# ─── Claude (Anthropic) 要約 ───────────────────────────────────────────────────
 
 def ai_rewrite(title: str, summary: str, content_type: str) -> str:
     """
-    OpenAI gpt-4o-mini で教員向けのひとこと要約を生成する。
-    OPENAI_API_KEY が未設定の場合は元の summary をそのまま返す。
+    Anthropic claude-haiku-3-5 で教員向けのひとこと要約を生成する。
+    ANTHROPIC_API_KEY が未設定の場合は元の summary をそのまま返す。
     """
-    key = os.environ.get("OPENAI_API_KEY", "")
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not key or not summary:
         return summary
 
@@ -107,7 +107,7 @@ def ai_rewrite(title: str, summary: str, content_type: str) -> str:
         instruction = (
             "高校の国語・吹奏楽担当教師が朝のホームルームで生徒に語りかける"
             "ための一言コメントを40〜60字の日本語で作成してください。"
-            "「〇〇先生ならこう語る」という自然な口語調で。"
+            "「先生ならこう語る」という自然な口語調で、説教くさくなく。"
         )
     else:
         instruction = (
@@ -119,20 +119,23 @@ def ai_rewrite(title: str, summary: str, content_type: str) -> str:
     prompt = f"{instruction}\n\nニュース: {title}\n{summary}"
     try:
         resp = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            },
             json={
-                "model": "gpt-4o-mini",
+                "model": "claude-haiku-4-5",
+                "max_tokens": 150,
                 "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 120,
-                "temperature": 0.7,
             },
             timeout=20,
         )
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
+        return resp.json()["content"][0]["text"].strip()
     except Exception as e:
-        print(f"  [OpenAI警告] {e}")
+        print(f"  [Claude警告] {e}")
         return summary
 
 
