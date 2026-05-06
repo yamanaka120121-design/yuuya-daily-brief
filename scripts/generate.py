@@ -117,10 +117,11 @@ def ai_rewrite(title: str, summary: str, ai_hint: str) -> str:
     prompt = (
         f"{_PERSONA}\n\n"
         f"以下のニュースについて、{ai_hint}を作成してください。\n"
-        f"【出力ルール】\n"
-        f"・山中先生の口調で1文（30〜55字）のみ\n"
-        f"・見出し・番号・前置き・記号は一切不要\n"
-        f"・音楽や言葉のたとえが入るとなお良い\n\n"
+        f"【厳守ルール】\n"
+        f"・**必ず1文だけ**（句点「。」は1個のみ）\n"
+        f"・**40字以内**で完結させること\n"
+        f"・見出し・番号・改行・前置きは一切不要\n"
+        f"・音楽や言葉のたとえが自然に入るとベスト\n\n"
         f"ニュースタイトル: {title}\n"
         f"概要: {summary}"
     )
@@ -281,7 +282,7 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
     if content_type == "morning":
         heading  = "朝の記事"
         title    = f"朝の記事 — {now.strftime('%m/%d')}"
-        tabs     = ["すべて", "漢字一問", "社会ニュース", "奈良", "国際"]
+        tabs     = ["すべて", "漢字一問", "奈良", "教育", "吹奏楽・音楽"]
     else:
         heading  = "昼の記事"
         title    = f"昼の記事 — {now.strftime('%m/%d')}"
