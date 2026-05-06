@@ -21,17 +21,17 @@ JST = timezone(timedelta(hours=9))
 _GN = "https://news.google.com/rss/search?hl=ja&gl=JP&ceid=JP:ja&q="
 
 MORNING_FEEDS = [
-    # 朝のホームルームで語れるトピック
-    ("社会のニュース（NHK）",  "https://www3.nhk.or.jp/rss/news/cat1.xml",                     2),
-    ("奈良のニュース",         _GN + "%E5%A5%88%E8%89%AF+%E3%83%8B%E3%83%A5%E3%83%BC%E3%82%B9", 2),
-    ("国際ニュース（NHK）",    "https://www3.nhk.or.jp/rss/news/cat2.xml",                     2),
+    # 朝礼トークの素材（奈良・教育・吹奏楽に絞る）
+    ("奈良のニュース",  _GN + "%E5%A5%88%E8%89%AF",                               2),  # 奈良
+    ("教育ニュース",    _GN + "%E9%AB%98%E6%A0%A1+%E6%95%99%E5%93%A1+%E6%8C%87%E5%B0%8E", 2),  # 高校+教員+指導
+    ("吹奏楽・音楽",   _GN + "%E5%90%B9%E5%A5%8F%E6%A5%BD",                      2),  # 吹奏楽
 ]
 
 NOON_FEEDS = [
-    # 授業づくり・部活指導に活かすトピック
-    ("教育ニュース",           _GN + "%E9%AB%98%E6%A0%A1+%E6%95%99%E8%82%B2+%E6%8C%87%E5%B0%8E", 2),
-    ("吹奏楽・音楽",           _GN + "%E5%90%B9%E5%A5%8F%E6%A5%BD",                             2),
-    ("国語・図書",             _GN + "%E5%9B%BD%E8%AA%9E+%E6%95%99%E8%82%B2+%E8%AA%AD%E6%9B%B8", 2),
+    # 授業・部活・図書委員会の準備素材
+    ("教育ニュース",   _GN + "%E6%8E%88%E6%A5%AD+%E5%AD%A6%E7%BF%92+%E9%AB%98%E6%A0%A1", 2),  # 授業+学習+高校
+    ("吹奏楽・音楽",  _GN + "%E5%90%B9%E5%A5%8F%E6%A5%BD+%E3%82%B3%E3%83%B3%E3%82%AF%E3%83%BC%E3%83%AB", 2),  # 吹奏楽+コンクール
+    ("国語・図書",    _GN + "%E5%9B%BD%E8%AA%9E+%E8%AA%AD%E6%9B%B8+%E5%9B%B3%E6%9B%B8%E9%A4%A8",          2),  # 国語+読書+図書館
 ]
 
 # ─── 漢字検定準一級 日替わり一問 ──────────────────────────────────────────────
@@ -98,6 +98,13 @@ def fetch_feed(url: str, max_items: int) -> list[dict]:
 
 # ─── Claude (Anthropic) 要約 ───────────────────────────────────────────────────
 
+_PERSONA = """\
+あなたは奈良県の高校で国語科と吹奏楽部を担当する教師・山中優弥先生（教員5年目）です。
+【人物像】音楽と言葉の間にある豊かな世界が好き。奈良の自然・歴史・文化に愛着がある。
+生徒との対話を何より大切にし、押しつけがましくない。たとえ話が上手で、
+音楽用語（テンポ・ハーモニー・フォルテなど）や国語の言葉を日常会話に自然に使う。
+ポップで温かみがあり、でも一言が深い。笑いの中に気づきを入れるのが得意。"""
+
 def ai_rewrite(title: str, summary: str, ai_hint: str) -> str:
     """
     Anthropic claude-haiku-4-5 でカテゴリ別・教員向けのひとこと要約を生成する。
@@ -108,9 +115,12 @@ def ai_rewrite(title: str, summary: str, ai_hint: str) -> str:
         return summary
 
     prompt = (
-        f"あなたは奈良県の高校で国語と吹奏楽部を担当する教師・山中優弥先生です。\n"
+        f"{_PERSONA}\n\n"
         f"以下のニュースについて、{ai_hint}を作成してください。\n"
-        f"出力はコメント本文のみ（見出しや前置き不要）。\n\n"
+        f"【出力ルール】\n"
+        f"・山中先生の口調で1文（30〜55字）のみ\n"
+        f"・見出し・番号・前置き・記号は一切不要\n"
+        f"・音楽や言葉のたとえが入るとなお良い\n\n"
         f"ニュースタイトル: {title}\n"
         f"概要: {summary}"
     )
@@ -349,9 +359,9 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
 
   </div>
 
-  <!-- ボトムナビ (教育ブログと同じ構造) -->
+  <!-- ボトムナビ -->
   <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100
-              flex justify-around px-2 py-2 pb-4">
+              flex justify-around px-2 py-2 pb-4 z-10">
     <a href="index.html"
        class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-slate-400 no-underline">
       <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -370,6 +380,13 @@ def generate_html(content_type: str, items_by_source: list[tuple], now: datetime
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
       </svg>
       <span class="text-xs {"font-semibold" if content_type == "noon" else ""}">昼</span>
+    </a>
+    <a href="memo.html"
+       class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-slate-400 no-underline">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+      </svg>
+      <span class="text-xs">メモ</span>
     </a>
   </nav>
 

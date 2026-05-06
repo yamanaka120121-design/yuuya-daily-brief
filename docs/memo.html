@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>メモ — yuuya-daily</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{brand:{50:'#f0f7ff',100:'#dbeeff',200:'#b6dcfe',300:'#75c0fc',400:'#3aa2f8',500:'#1183e9',600:'#0566c7',700:'#0552a1'}},fontFamily:{sans:['"Noto Sans JP"','sans-serif']}}}}</script>
+<style>
+  body{background:#f1f5f9}
+  .card{background:white;border-radius:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;display:inline-block}
+  .tab-btn.active{background:#1183e9;color:white}
+  .tab-btn:not(.active){background:#f1f5f9;color:#64748b}
+  .fab{width:56px;height:56px;background:linear-gradient(135deg,#1183e9,#3aa2f8);border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(17,131,233,.4);border:none;cursor:pointer;position:fixed;bottom:88px;right:20px;z-index:20}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:30;display:flex;align-items:flex-end}
+  .modal-sheet{background:white;border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:600px;margin:0 auto}
+  textarea{resize:none;outline:none}
+  textarea:focus{box-shadow:0 0 0 2px #1183e9}
+  .cat-btn.selected{box-shadow:0 0 0 2px #1183e9;background:#f0f7ff;color:#1183e9;font-weight:700}
+</style>
+</head>
+<body class="font-sans min-h-screen" style="background:#f1f5f9">
+
+  <!-- ステータスバー -->
+  <div class="bg-white px-6 pt-3 pb-2 flex justify-between items-center">
+    <span class="text-xs font-semibold text-slate-700" id="clock">--:--</span>
+    <span class="text-xs text-slate-400" id="dateLabel"></span>
+    <div class="flex gap-1 items-center text-slate-500">
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33C16.4 22 17 21.4 17 20.67V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
+  </div>
+
+  <!-- ヘッダー -->
+  <div class="px-5 pt-3 pb-0">
+    <div class="flex justify-between items-center mb-1">
+      <h1 class="text-lg font-bold text-slate-800">メモ</h1>
+      <button id="exportBtn" type="button" title="Sheetsにエクスポート"
+              class="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center hover:bg-slate-200">
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+      </button>
+    </div>
+    <p class="text-sm text-slate-400 mb-4">あなたの気づきが、明日の授業を変えます</p>
+
+    <!-- フィルタータブ -->
+    <div class="flex gap-2 mb-4 overflow-x-auto pb-1" id="tabRow">
+      <button type="button" data-cat="すべて" class="tab-btn active flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">すべて</button>
+      <button type="button" data-cat="授業のメモ" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">授業のメモ</button>
+      <button type="button" data-cat="部活" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">部活</button>
+      <button type="button" data-cat="今日の良かったこと" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">今日の良かったこと</button>
+      <button type="button" data-cat="発見・アイデア" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full">発見・アイデア</button>
+    </div>
+  </div>
+
+  <!-- メモ一覧 -->
+  <div class="px-5 pb-32 space-y-3" id="memoList">
+    <!-- JSで描画 -->
+  </div>
+
+  <!-- 空の状態 -->
+  <div id="emptyState" class="hidden px-5 py-16 text-center">
+    <div class="text-5xl mb-4">✏️</div>
+    <p class="text-sm font-semibold text-slate-500">まだメモがありません</p>
+    <p class="text-xs text-slate-400 mt-1">右下の＋ボタンから記録しましょう</p>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" id="openModal" aria-label="メモを追加">
+    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+  </button>
+
+  <!-- ボトムナビ -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 flex justify-around px-2 py-2 pb-4 z-10">
+    <a href="index.html" class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-slate-400 no-underline">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="text-xs">ホーム</span>
+    </a>
+    <a href="morning.html" class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-slate-400 no-underline">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z"/>
+      </svg>
+      <span class="text-xs">朝</span>
+    </a>
+    <a href="noon.html" class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-slate-400 no-underline">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <span class="text-xs">昼</span>
+    </a>
+    <button type="button" class="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] justify-center text-brand-500">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+      </svg>
+      <span class="text-xs font-semibold">メモ</span>
+    </button>
+  </nav>
+
+  <!-- メモ追加モーダル -->
+  <div id="modal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-sheet w-full">
+      <div class="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-5"></div>
+      <h2 class="text-base font-bold text-slate-800 mb-4">メモを追加</h2>
+
+      <!-- カテゴリ選択 -->
+      <p class="text-xs font-semibold text-slate-500 mb-2">カテゴリ</p>
+      <div class="flex flex-wrap gap-2 mb-4" id="catBtns">
+        <button type="button" data-cat="授業のメモ"       class="cat-btn tag bg-violet-50 text-violet-600 selected">授業のメモ</button>
+        <button type="button" data-cat="部活"             class="cat-btn tag bg-rose-50 text-rose-600">部活</button>
+        <button type="button" data-cat="今日の良かったこと" class="cat-btn tag bg-green-50 text-green-600">今日の良かったこと</button>
+        <button type="button" data-cat="発見・アイデア"   class="cat-btn tag bg-amber-50 text-amber-600">発見・アイデア</button>
+      </div>
+
+      <!-- 内容入力 -->
+      <p class="text-xs font-semibold text-slate-500 mb-2">内容 <span class="text-slate-400 font-normal">（140字まで）</span></p>
+      <div class="relative">
+        <textarea id="memoInput" rows="4" maxlength="140" placeholder="今日の気づき、生徒の言葉、部活での発見を書いてみよう…"
+                  class="w-full border border-slate-200 rounded-xl p-3 text-sm text-slate-700 leading-relaxed"
+        ></textarea>
+        <span id="charCount" class="absolute bottom-2 right-3 text-xs text-slate-400">0 / 140</span>
+      </div>
+
+      <!-- ボタン -->
+      <div class="flex gap-3 mt-4">
+        <button id="cancelModal" type="button"
+                class="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-semibold text-sm">
+          キャンセル
+        </button>
+        <button id="saveModal" type="button"
+                class="flex-1 py-3 rounded-xl bg-brand-500 text-white font-semibold text-sm">
+          保存する
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /* ────────────────── データ管理 ────────────────── */
+  const STORAGE_KEY = 'yuuya_memos_v1';
+  const CAT_STYLES = {
+    '授業のメモ':        'bg-violet-50 text-violet-600 border-l-4 border-violet-400',
+    '部活':              'bg-rose-50   text-rose-600   border-l-4 border-rose-400',
+    '今日の良かったこと': 'bg-green-50  text-green-600  border-l-4 border-green-400',
+    '発見・アイデア':    'bg-amber-50  text-amber-600  border-l-4 border-amber-300',
+  };
+  const TAG_STYLES = {
+    '授業のメモ':        'bg-violet-50 text-violet-600',
+    '部活':              'bg-rose-50   text-rose-600',
+    '今日の良かったこと': 'bg-green-50  text-green-600',
+    '発見・アイデア':    'bg-amber-50  text-amber-600',
+  };
+
+  function loadMemos() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+    catch { return []; }
+  }
+  function saveMemos(memos) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(memos));
+  }
+  function deleteMemo(id) {
+    const memos = loadMemos().filter(m => m.id !== id);
+    saveMemos(memos);
+    renderMemos(currentCat);
+  }
+
+  /* ────────────────── 描画 ────────────────── */
+  let currentCat = 'すべて';
+
+  function relativeTime(ts) {
+    const diff = Date.now() - ts;
+    const m = Math.floor(diff / 60000);
+    if (m < 1)   return 'たった今';
+    if (m < 60)  return `${m}分前`;
+    const h = Math.floor(m / 60);
+    if (h < 24)  return `${h}時間前`;
+    const d = Math.floor(h / 24);
+    if (d < 7)   return `${d}日前`;
+    return new Date(ts).toLocaleDateString('ja-JP', {month:'numeric', day:'numeric'});
+  }
+
+  function renderMemos(cat) {
+    currentCat = cat;
+    const all   = loadMemos();
+    const items = cat === 'すべて' ? all : all.filter(m => m.category === cat);
+    const list  = document.getElementById('memoList');
+    const empty = document.getElementById('emptyState');
+
+    if (items.length === 0) {
+      list.innerHTML  = '';
+      empty.classList.remove('hidden');
+      return;
+    }
+    empty.classList.add('hidden');
+
+    list.innerHTML = items.slice().reverse().map(m => {
+      const border   = (CAT_STYLES[m.category] || '').split(' ').filter(c=>c.startsWith('border')).join(' ');
+      const tagStyle = TAG_STYLES[m.category] || 'bg-slate-100 text-slate-500';
+      return `
+        <div class="card p-4 ${border}">
+          <div class="flex justify-between items-start mb-2">
+            <span class="tag ${tagStyle}">${m.category}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-400">${relativeTime(m.ts)}</span>
+              <button type="button" onclick="deleteMemo('${m.id}')"
+                      class="text-slate-300 hover:text-red-400 text-xs leading-none" aria-label="削除">✕</button>
+            </div>
+          </div>
+          <p class="text-sm text-slate-700 leading-relaxed font-medium">${escHtml(m.content)}</p>
+        </div>`;
+    }).join('');
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ────────────────── タブ ────────────────── */
+  document.querySelectorAll('#tabRow .tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#tabRow .tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderMemos(btn.dataset.cat);
+    });
+  });
+
+  /* ────────────────── モーダル ────────────────── */
+  let selectedCat = '授業のメモ';
+
+  document.getElementById('openModal').addEventListener('click', () => {
+    document.getElementById('modal').classList.remove('hidden');
+    document.getElementById('memoInput').value = '';
+    document.getElementById('charCount').textContent = '0 / 140';
+    document.getElementById('memoInput').focus();
+  });
+  document.getElementById('cancelModal').addEventListener('click', () => {
+    document.getElementById('modal').classList.add('hidden');
+  });
+  document.getElementById('modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal'))
+      document.getElementById('modal').classList.add('hidden');
+  });
+
+  document.querySelectorAll('#catBtns .cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#catBtns .cat-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedCat = btn.dataset.cat;
+    });
+  });
+
+  document.getElementById('memoInput').addEventListener('input', function() {
+    document.getElementById('charCount').textContent = `${this.value.length} / 140`;
+  });
+
+  document.getElementById('saveModal').addEventListener('click', () => {
+    const content = document.getElementById('memoInput').value.trim();
+    if (!content) return;
+    const memos = loadMemos();
+    memos.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+      category: selectedCat,
+      content,
+      ts: Date.now(),
+    });
+    saveMemos(memos);
+    document.getElementById('modal').classList.add('hidden');
+    // タブを「すべて」に戻して再描画
+    document.querySelectorAll('#tabRow .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('#tabRow .tab-btn[data-cat="すべて"]').classList.add('active');
+    renderMemos('すべて');
+  });
+
+  /* ────────────────── エクスポート (Google Sheets 用) ────────────────── */
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    const memos = loadMemos();
+    if (memos.length === 0) { alert('エクスポートするメモがありません'); return; }
+    const header = '日時\tカテゴリ\t内容';
+    const rows   = memos.map(m => {
+      const d = new Date(m.ts).toLocaleString('ja-JP');
+      return `${d}\t${m.category}\t${m.content}`;
+    });
+    const tsv = [header, ...rows].join('\n');
+    navigator.clipboard.writeText(tsv).then(() => {
+      alert('📋 クリップボードにコピーしました！\nGoogle Sheets を開いてセルA1に貼り付けてください。');
+    }).catch(() => {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = tsv;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      alert('📋 クリップボードにコピーしました！\nGoogle Sheets を開いてセルA1に貼り付けてください。');
+    });
+  });
+
+  /* ────────────────── 時計 & 初期描画 ────────────────── */
+  (function init() {
+    const d    = new Date();
+    const days = ['日','月','火','水','木','金','土'];
+    document.getElementById('clock').textContent =
+      d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    document.getElementById('dateLabel').textContent =
+      `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+    renderMemos('すべて');
+  })();
+  </script>
+
+</body>
+</html>
