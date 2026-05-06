@@ -21,7 +21,7 @@
 
   <!-- ステータスバー -->
   <div class="bg-white px-6 pt-3 pb-2 flex justify-between items-center">
-    <span class="text-xs font-semibold text-slate-700">18:47</span>
+    <span class="text-xs font-semibold text-slate-700">18:56</span>
     <span class="text-xs text-slate-400">2026年05月06日（Wed）</span>
     <div class="flex gap-1 items-center text-slate-500">
       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
@@ -45,11 +45,11 @@
 
     <!-- フィルタータブ -->
     <div class="flex gap-2 mb-4 overflow-x-auto pb-1">
-      <button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-brand-500 text-white">すべて</button><button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">漢字一問</button><button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">社会ニュース</button><button type="button" class="flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">文化・エンタメ</button>
+      <button type="button" data-cat="すべて" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-brand-500 text-white">すべて</button><button type="button" data-cat="漢字一問" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">漢字一問</button><button type="button" data-cat="社会ニュース" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">社会ニュース</button><button type="button" data-cat="奈良" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">奈良</button><button type="button" data-cat="教育" class="tab-btn flex-shrink-0 text-sm font-semibold px-4 py-2 rounded-full bg-slate-100 text-slate-500">教育</button>
     </div>
 
     <!-- 漢字カード (朝のみ) -->
-    <div class="card mb-1 overflow-hidden">
+    <div id="kanji-wrap"><div class="card mb-1 overflow-hidden">
   <div class="h-20 flex items-center justify-center"
        style="background:linear-gradient(135deg,#fef3c7,#fde68a)">
     <span class="text-4xl">✏️</span>
@@ -69,12 +69,13 @@
     </details>
   </div>
 </div>
-
+</div>
 
     <!-- 記事リスト -->
     <ul class="space-y-3">
 <li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115401000.html" target="_blank" rel="noopener"
-  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block"
+  data-category="社会ニュース">
   <div class="w-16 h-16 rounded-xl bg-blue-50 flex-shrink-0 flex items-center justify-center text-2xl">🏛️</div>
   <div class="flex-1">
     <div class="flex gap-1 mb-1">
@@ -82,11 +83,12 @@
       <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
     </div>
     <p class="text-sm font-semibold text-slate-700 leading-snug">川崎市の路上で女性死亡 ひき逃げ事件か</p>
-    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
+    
   </div>
 </a></li>
 <li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115361000.html" target="_blank" rel="noopener"
-  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
+  class="card p-3 flex gap-3 items-start w-full text-left no-underline block"
+  data-category="社会ニュース">
   <div class="w-16 h-16 rounded-xl bg-blue-50 flex-shrink-0 flex items-center justify-center text-2xl">🏛️</div>
   <div class="flex-1">
     <div class="flex gap-1 mb-1">
@@ -94,55 +96,7 @@
       <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
     </div>
     <p class="text-sm font-semibold text-slate-700 leading-snug">京都 南丹 小学生男児の遺体遺棄事件 父親を殺人容疑で再逮捕</p>
-    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
-  </div>
-</a></li>
-<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115371000.html" target="_blank" rel="noopener"
-  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
-  <div class="w-16 h-16 rounded-xl bg-blue-50 flex-shrink-0 flex items-center justify-center text-2xl">🏛️</div>
-  <div class="flex-1">
-    <div class="flex gap-1 mb-1">
-      <span class="tag bg-blue-50 text-blue-600">社会のニュース</span>
-      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
-    </div>
-    <p class="text-sm font-semibold text-slate-700 leading-snug">台風5号 日本のはるか南で発生 日本に接近しない見込み</p>
-    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
-  </div>
-</a></li>
-<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115381000.html" target="_blank" rel="noopener"
-  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
-  <div class="w-16 h-16 rounded-xl bg-amber-50 flex-shrink-0 flex items-center justify-center text-2xl">🎭</div>
-  <div class="flex-1">
-    <div class="flex gap-1 mb-1">
-      <span class="tag bg-amber-50 text-amber-600">文化・エンタメ</span>
-      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
-    </div>
-    <p class="text-sm font-semibold text-slate-700 leading-snug">中国の大型連休 本土から香港に訪問100万人超 マナー違反も</p>
-    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
-  </div>
-</a></li>
-<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015115241000.html" target="_blank" rel="noopener"
-  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
-  <div class="w-16 h-16 rounded-xl bg-amber-50 flex-shrink-0 flex items-center justify-center text-2xl">🎭</div>
-  <div class="flex-1">
-    <div class="flex gap-1 mb-1">
-      <span class="tag bg-amber-50 text-amber-600">文化・エンタメ</span>
-      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
-    </div>
-    <p class="text-sm font-semibold text-slate-700 leading-snug">ハンタウイルス集団感染疑いの船 カナリア諸島で受け入れへ</p>
-    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
-  </div>
-</a></li>
-<li><a href="http://www3.nhk.or.jp/news/html/20260506/k10015101791000.html" target="_blank" rel="noopener"
-  class="card p-3 flex gap-3 items-start w-full text-left no-underline block">
-  <div class="w-16 h-16 rounded-xl bg-amber-50 flex-shrink-0 flex items-center justify-center text-2xl">🎭</div>
-  <div class="flex-1">
-    <div class="flex gap-1 mb-1">
-      <span class="tag bg-amber-50 text-amber-600">文化・エンタメ</span>
-      <span class="tag bg-slate-100 text-slate-500">📖 1分</span>
-    </div>
-    <p class="text-sm font-semibold text-slate-700 leading-snug">【随時更新】ロシア ウクライナに軍事侵攻（5月6日の動き）</p>
-    <p class="text-xs text-slate-400 mt-0.5">NHK NEWS</p>
+    
   </div>
 </a></li>
 </ul>
@@ -178,6 +132,34 @@
   <div class="fixed bottom-0 left-0 right-0 h-1 flex items-end justify-center pb-1 pointer-events-none">
     <div class="w-32 h-1 bg-slate-300 rounded-full"></div>
   </div>
+
+  <script>
+    /* ── フィルタータブ ── */
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cat = btn.dataset.cat;
+        /* タブの見た目を切り替える */
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('bg-brand-500', 'text-white');
+          b.classList.add('bg-slate-100', 'text-slate-500');
+        });
+        btn.classList.remove('bg-slate-100', 'text-slate-500');
+        btn.classList.add('bg-brand-500', 'text-white');
+        /* カードを絞り込む */
+        document.querySelectorAll('[data-category]').forEach(card => {
+          const li = card.closest('li') || card;
+          li.style.display =
+            (cat === 'すべて' || card.dataset.category === cat) ? '' : 'none';
+        });
+        /* 漢字カードは「すべて」「漢字一問」タブのみ表示 */
+        const kanjiWrap = document.getElementById('kanji-wrap');
+        if (kanjiWrap) {
+          kanjiWrap.style.display =
+            (cat === 'すべて' || cat === '漢字一問') ? '' : 'none';
+        }
+      });
+    });
+  </script>
 
 </body>
 </html>
