@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>昼の記事 — 05/06</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f1f5f9; color: #1e293b; min-height: 100vh; padding: 16px 16px 40px;
+  }
+  .container { max-width: 600px; margin: 0 auto; }
+
+  /* ── ヘッダー ── */
+  .page-header { margin-bottom: 20px; padding-top: 4px; }
+  .page-date { font-size: 11px; color: #94a3b8; font-weight: 500; margin-bottom: 2px; }
+  .page-title { font-size: 22px; font-weight: 700; color: #1e293b; }
+  .page-title span { color: #1a4a8a; }
+
+  /* ── セクションラベル ── */
+  .section-label {
+    display: inline-block; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 99px; letter-spacing: 0.04em;
+    background: #1a4a8a; color: white; margin-bottom: 10px; margin-top: 20px;
+  }
+  .section-label.kanji { background: #b45309; }
+
+  /* ── カード共通 ── */
+  .card {
+    background: white; border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    padding: 16px; margin-bottom: 10px;
+  }
+  .card + .card { margin-top: 0; }
+
+  /* ── 漢字カード ── */
+  .card.kanji-card { border-left: 4px solid #b45309; }
+  .kanji-q { font-size: 15px; font-weight: 600; color: #1e293b; line-height: 1.5; }
+  .kanji-hint { margin-top: 4px; }
+  .kanji-hint summary {
+    font-size: 13px; color: #b45309; cursor: pointer;
+    font-weight: 600; user-select: none; list-style: none;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .kanji-hint summary::before { content: "▶"; font-size: 9px; }
+  details[open] .kanji-hint summary::before { content: "▼"; }
+  .kanji-a { font-size: 14px; font-weight: 700; color: #1e293b; margin-top: 10px; }
+  .kanji-m { font-size: 12px; color: #64748b; margin-top: 3px; }
+
+  /* ── ニュースカード ── */
+  .news-card { display: block; text-decoration: none; color: inherit; }
+  .news-card:hover .news-title { color: #1a4a8a; }
+  .tag {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 99px; margin-bottom: 6px;
+  }
+  .tag-society { background: #dbeafe; color: #1d4ed8; }
+  .tag-culture  { background: #fef3c7; color: #92400e; }
+  .tag-science  { background: #d1fae5; color: #065f46; }
+  .tag-default  { background: #f1f5f9; color: #475569; }
+  .news-title {
+    font-size: 14px; font-weight: 600; color: #1e293b;
+    line-height: 1.5; margin-bottom: 4px;
+  }
+  .news-summary { font-size: 12px; color: #64748b; line-height: 1.6; }
+  .news-link {
+    display: inline-block; margin-top: 8px;
+    font-size: 12px; font-weight: 600; color: #1a4a8a;
+  }
+
+  /* ── フッター ── */
+  .page-footer {
+    text-align: center; font-size: 11px; color: #cbd5e1;
+    margin-top: 32px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <p class="page-date">2026年05月06日（Wed） 09:09 JST</p>
+    <h1 class="page-title"><span>昼の記事</span></h1>
+  </div>
+  <p class="section-label">科学・医療</p>
+<div class="card"><a class="news-card" href="http://www3.nhk.or.jp/news/html/20260506/k10015115201000.html" target="_blank" rel="noopener"><p class="news-title">日産 欧州の従業員約900人削減 英工場の生産ラインは統合へ</p><p class="news-summary">経営再建中の日産自動車は、ヨーロッパの従業員の1割程度にあたるおよそ900人を削減することを明らかにしました。イギリスの工場で2つの生産ラインを1つに統合し、稼働率を高める方針です。</p><span class="news-link">記事を読む →</span></a></div>
+<div class="card"><a class="news-card" href="http://www3.nhk.or.jp/news/html/20260506/k10015115031000.html" target="_blank" rel="noopener"><p class="news-title">赤澤経産相 中東産油国と会談 原油安定供給へ協力で一致</p><p class="news-summary">赤澤経済産業大臣は、中東の産油国であるサウジアラビアとUAE＝アラブ首長国連邦を相次いで訪問し、ホルムズ海峡が事実上封鎖される中、原油の安定供給に向けて協力していくことで一致したと明らかにしました。</p><span class="news-link">記事を読む →</span></a></div>
+<div class="card"><a class="news-card" href="http://www3.nhk.or.jp/news/html/20260506/k10015115181000.html" target="_blank" rel="noopener"><p class="news-title">NY市場 ナスダック S＆P500指数が最高値 イラン停戦継続やAIで</p><p class="news-summary">5日のニューヨーク株式市場ではアメリカとイランの停戦が当面、維持されるとの期待感から幅広い銘柄に買い注文が出て、ハイテク株の比率が高いナスダックの株価指数などが最高値を更新しました。</p><span class="news-link">記事を読む →</span></a></div>
+<p class="section-label">文化・エンタメ</p>
+<div class="card"><a class="news-card" href="http://www3.nhk.or.jp/news/html/20260506/k10015115201000.html" target="_blank" rel="noopener"><p class="news-title">日産 欧州の従業員約900人削減 英工場の生産ラインは統合へ</p><p class="news-summary">経営再建中の日産自動車は、ヨーロッパの従業員の1割程度にあたるおよそ900人を削減することを明らかにしました。イギリスの工場で2つの生産ラインを1つに統合し、稼働率を高める方針です。</p><span class="news-link">記事を読む →</span></a></div>
+<div class="card"><a class="news-card" href="http://www3.nhk.or.jp/news/html/20260506/k10015115041000.html" target="_blank" rel="noopener"><p class="news-title">米国防長官 “停戦は維持” UAE “イランから攻撃”と発表</p><p class="news-summary">…</p><span class="news-link">記事を読む →</span></a></div>
+<div class="card"><a class="news-card" href="http://www3.nhk.or.jp/news/html/20260506/k10015115191000.html" target="_blank" rel="noopener"><p class="news-title">アイヌ民族の遺骨 ロンドンの自然史博物館から返還で式典</p><p class="news-summary">イギリスのロンドンにある自然史博物館に保管されていたアイヌ民族の遺骨7体が日本政府の求めに応じて返還され、現地で式典が開かれました。海外からの返還は今回で4例目で、中には160年にわたって保管されていた遺骨もあります。</p><span class="news-link">記事を読む →</span></a></div>
+
+  <p class="page-footer">山中優弥 専用 · yuuya-daily</p>
+</div>
+</body>
+</html>
